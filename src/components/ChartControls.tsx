@@ -1,0 +1,101 @@
+import { useStore } from '../store/useStore';
+import type { ChartConfig, ChartType } from '../engine/types';
+import { Eye, EyeOff } from 'lucide-react';
+
+const CHART_TYPES: { value: ChartType; label: string }[] = [
+  { value: 'line', label: 'Line' },
+  { value: 'area', label: 'Area' },
+  { value: 'bar', label: 'Bar' },
+  { value: 'scatter', label: 'Scatter' },
+];
+
+export function ChartControls({ chart }: { chart: ChartConfig }) {
+  const datasets = useStore((s) => s.datasets);
+  const updateChartTitle = useStore((s) => s.updateChartTitle);
+  const updateChartType = useStore((s) => s.updateChartType);
+  const updateChartXKey = useStore((s) => s.updateChartXKey);
+  const toggleSeriesVisibility = useStore((s) => s.toggleSeriesVisibility);
+  const updateSeriesColor = useStore((s) => s.updateSeriesColor);
+  const updateSeriesLabel = useStore((s) => s.updateSeriesLabel);
+
+  // Collect all available column keys across datasets for X-axis selection
+  const allXKeys = datasets.length > 0
+    ? datasets[0].table.columns.map((c) => c.key)
+    : [];
+
+  return (
+    <div className="px-5 pb-4 space-y-3 border-b border-white/5">
+      {/* Title + Chart Type row */}
+      <div className="flex gap-3 items-center">
+        <input
+          type="text"
+          value={chart.title}
+          onChange={(e) => updateChartTitle(chart.id, e.target.value)}
+          className="flex-1 text-xs bg-transparent"
+          placeholder="Chart title"
+        />
+        <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
+          {CHART_TYPES.map((ct) => (
+            <button
+              key={ct.value}
+              onClick={() => updateChartType(chart.id, ct.value)}
+              className={`px-2 py-1 text-[10px] rounded-md transition-all cursor-pointer ${
+                chart.type === ct.value
+                  ? 'bg-white/10 text-white/80'
+                  : 'text-white/30 hover:text-white/50'
+              }`}
+            >
+              {ct.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* X-axis selector */}
+      {allXKeys.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-white/30 w-8">X axis</span>
+          <select
+            value={chart.xKey}
+            onChange={(e) => updateChartXKey(chart.id, e.target.value)}
+            className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white/70 outline-none"
+          >
+            <option value="__rowIndex__">Row Index</option>
+            {allXKeys.map((key) => (
+              <option key={key} value={key}>{key}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Series list */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] text-white/30 uppercase tracking-wider">Series</span>
+        {chart.series.map((series, i) => (
+          <div key={`${series.datasetId}-${series.columnKey}`} className="flex items-center gap-2">
+            <button
+              onClick={() => toggleSeriesVisibility(chart.id, i)}
+              className="text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+            >
+              {series.visible
+                ? <Eye className="w-3.5 h-3.5" />
+                : <EyeOff className="w-3.5 h-3.5" />
+              }
+            </button>
+            <input
+              type="color"
+              value={series.color}
+              onChange={(e) => updateSeriesColor(chart.id, i, e.target.value)}
+            />
+            <input
+              type="text"
+              value={series.label}
+              onChange={(e) => updateSeriesLabel(chart.id, i, e.target.value)}
+              className="flex-1 text-xs bg-transparent py-0.5"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
