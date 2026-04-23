@@ -68,6 +68,42 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     (s) => s.columnKey + '_' + s.datasetId.slice(-6)
   );
 
+  const visibleDataKeys = visibleSeries.map(
+    (s) => s.columnKey + '_' + s.datasetId.slice(-6)
+  );
+
+  const yDomain = useMemo((): [number, number] => {
+    if (chart.yAxisMin !== 'auto' && chart.yAxisMax !== 'auto') {
+      return [chart.yAxisMin, chart.yAxisMax];
+    }
+    let min = Infinity;
+    let max = -Infinity;
+    for (const row of data) {
+      for (const key of visibleDataKeys) {
+        const val = row[key];
+        if (typeof val === 'number' && isFinite(val)) {
+          if (val < min) min = val;
+          if (val > max) max = val;
+        }
+      }
+    }
+    if (min === Infinity) return [0, 1];
+    const range = max - min || Math.abs(max) || 1;
+    const autoMin = min - 0.05 * range;
+    const autoMax = max + 0.05 * range;
+    return [
+      chart.yAxisMin === 'auto' ? autoMin : chart.yAxisMin,
+      chart.yAxisMax === 'auto' ? autoMax : chart.yAxisMax,
+    ];
+  }, [data, visibleDataKeys, chart.yAxisMin, chart.yAxisMax]);
+
+  const xDomain = useMemo((): [number | 'auto', number | 'auto'] | undefined => {
+    const min = chart.xAxisMin === 'auto' ? 'auto' as const : chart.xAxisMin;
+    const max = chart.xAxisMax === 'auto' ? 'auto' as const : chart.xAxisMax;
+    if (min === 'auto' && max === 'auto') return undefined;
+    return [min, max];
+  }, [chart.xAxisMin, chart.xAxisMax]);
+
   const renderChart = () => {
     const commonProps = {
       data,
@@ -75,14 +111,16 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     };
 
     const xKey = chart.xKey;
+    const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(xDomain ? { domain: xDomain } : {}) };
+    const yAxisProps = { tick: { fontSize: 11 }, tickLine: false, axisLine: false, width: 50, tickFormatter: formatNumber, domain: yDomain };
 
     switch (chart.type) {
       case 'area':
         return (
           <AreaChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={50} tickFormatter={formatNumber} />
+            <XAxis {...xAxisProps} />
+            <YAxis {...yAxisProps} />
             <Tooltip content={<CustomTooltip />} />
             {visibleSeries.map((s) => (
               <Area
@@ -106,8 +144,8 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
         return (
           <BarChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={50} tickFormatter={formatNumber} />
+            <XAxis {...xAxisProps} />
+            <YAxis {...yAxisProps} />
             <Tooltip content={<CustomTooltip />} />
             {visibleSeries.map((s) => (
               <Bar
@@ -126,8 +164,8 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
         return (
           <ScatterChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} name={xKey} />
-            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={50} tickFormatter={formatNumber} />
+            <XAxis {...xAxisProps} name={xKey} />
+            <YAxis {...yAxisProps} />
             <Tooltip content={<CustomTooltip />} />
             {visibleSeries.map((s) => (
               <Scatter
@@ -148,8 +186,8 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
         return (
           <LineChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={50} tickFormatter={formatNumber} />
+            <XAxis {...xAxisProps} />
+            <YAxis {...yAxisProps} />
             <Tooltip content={<CustomTooltip />} />
             {visibleSeries.map((s) => (
               <Line

@@ -75,6 +75,10 @@ export function generateCharts(
       type: 'line' as const,
       xKey: indexKey ?? '__rowIndex__',
       series: [series],
+      yAxisMin: 'auto' as const,
+      yAxisMax: 'auto' as const,
+      xAxisMin: 'auto' as const,
+      xAxisMax: 'auto' as const,
     };
   });
 }
@@ -114,6 +118,10 @@ export function mergeDatasetIntoCharts(
         type: 'line',
         xKey: indexKey ?? '__rowIndex__',
         series: [newSeries],
+        yAxisMin: 'auto',
+        yAxisMax: 'auto',
+        xAxisMin: 'auto',
+        xAxisMax: 'auto',
       });
     }
   }

@@ -56,6 +56,26 @@ function inferType(values: (string | number | null)[]): ColumnType {
   return 'text';
 }
 
+function isNumericString(s: string): boolean {
+  const trimmed = s.trim();
+  return trimmed !== '' && !isNaN(Number(trimmed)) && isFinite(Number(trimmed));
+}
+
+function buildColumnsFromRows(rows: unknown[][]): { columns: Column[]; rowCount: number } {
+  if (rows.length === 0 || rows[0].length === 0) return { columns: [], rowCount: 0 };
+  const numCols = rows[0].length;
+  const columns: Column[] = Array.from({ length: numCols }, (_, colIdx) => {
+    const values = rows.map((row) => {
+      const v = (row as unknown[])[colIdx];
+      if (v === undefined || v === null || v === '') return null;
+      return v as string | number;
+    });
+    const key = `Column ${colIdx + 1}`;
+    return { key, header: key, type: inferType(values), values };
+  });
+  return { columns, rowCount: rows.length };
+}
+
 function parseDelimited(text: string): DataTable | null {
   const delimiter = detectDelimiter(text);
   const result = Papa.parse(text, {
@@ -70,6 +90,20 @@ function parseDelimited(text: string): DataTable | null {
 
   const fields = result.meta.fields;
   if (!fields || fields.length === 0) return null;
+
+  // If all header fields parse as numbers, the first row was data, not headers
+  if (fields.every(isNumericString)) {
+    const noHeader = Papa.parse(text, {
+      delimiter,
+      header: false,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+    });
+    if (noHeader.errors.length > 0 && noHeader.data.length === 0) return null;
+    const { columns, rowCount } = buildColumnsFromRows(noHeader.data as unknown[][]);
+    if (columns.length === 0) return null;
+    return { columns, rowCount, indexColumnKey: null };
+  }
 
   const columns: Column[] = fields.map((field) => {
     const values = result.data.map((row: unknown) => {

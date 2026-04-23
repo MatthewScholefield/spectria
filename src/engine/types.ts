@@ -29,10 +29,16 @@ export interface SeriesConfig {
   visible: boolean;
 }
 
+export type AxisBound = 'auto' | number;
+
 export interface ChartConfig {
   id: string;
   title: string;
   type: ChartType;
   xKey: string;
   series: SeriesConfig[];
+  yAxisMin: AxisBound;
+  yAxisMax: AxisBound;
+  xAxisMin: AxisBound;
+  xAxisMax: AxisBound;
 }

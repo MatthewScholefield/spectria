@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Dataset, ChartConfig, ChartType } from '../engine/types';
+import type { Dataset, ChartConfig, ChartType, AxisBound } from '../engine/types';
 import { parseRawData } from '../engine/parser';
 import { generateCharts, mergeDatasetIntoCharts } from '../engine/analyzer';
 import { generateId, generateDatasetName } from '../utils/format';
@@ -23,6 +23,7 @@ interface AppState {
   toggleSeriesVisibility: (chartId: string, seriesIndex: number) => void;
   updateSeriesColor: (chartId: string, seriesIndex: number, color: string) => void;
   updateSeriesLabel: (chartId: string, seriesIndex: number, label: string) => void;
+  updateAxisBound: (chartId: string, key: 'yAxisMin' | 'yAxisMax' | 'xAxisMin' | 'xAxisMax', value: AxisBound) => void;
 
   setGridColumns: (cols: GridColumns) => void;
   setShowDataModal: (show: boolean) => void;
@@ -148,6 +149,14 @@ export const useStore = create<AppState>((set, get) => ({
         );
         return { ...c, series };
       }),
+    }));
+  },
+
+  updateAxisBound: (chartId: string, key: 'yAxisMin' | 'yAxisMax' | 'xAxisMin' | 'xAxisMax', value: AxisBound) => {
+    set((state) => ({
+      charts: state.charts.map((c) =>
+        c.id === chartId ? { ...c, [key]: value } : c
+      ),
     }));
   },
 

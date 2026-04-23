@@ -1,5 +1,5 @@
 import { useStore } from '../store/useStore';
-import type { ChartConfig, ChartType } from '../engine/types';
+import type { ChartConfig, ChartType, AxisBound } from '../engine/types';
 import { Eye, EyeOff } from 'lucide-react';
 
 const CHART_TYPES: { value: ChartType; label: string }[] = [
@@ -17,6 +17,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
   const toggleSeriesVisibility = useStore((s) => s.toggleSeriesVisibility);
   const updateSeriesColor = useStore((s) => s.updateSeriesColor);
   const updateSeriesLabel = useStore((s) => s.updateSeriesLabel);
+  const updateAxisBound = useStore((s) => s.updateAxisBound);
 
   // Collect all available column keys across datasets for X-axis selection
   const allXKeys = datasets.length > 0
@@ -68,6 +69,13 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
         </div>
       )}
 
+      {/* Axis range */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] text-white/30 uppercase tracking-wider">Axis Range</span>
+        <AxisRow label="Y" min={chart.yAxisMin} max={chart.yAxisMax} onChangeMin={(v) => updateAxisBound(chart.id, 'yAxisMin', v)} onChangeMax={(v) => updateAxisBound(chart.id, 'yAxisMax', v)} />
+        <AxisRow label="X" min={chart.xAxisMin} max={chart.xAxisMax} onChangeMin={(v) => updateAxisBound(chart.id, 'xAxisMin', v)} onChangeMax={(v) => updateAxisBound(chart.id, 'xAxisMax', v)} />
+      </div>
+
       {/* Series list */}
       <div className="space-y-1.5">
         <span className="text-[10px] text-white/30 uppercase tracking-wider">Series</span>
@@ -96,6 +104,43 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function AxisRow({ label, min, max, onChangeMin, onChangeMax }: {
+  label: string;
+  min: AxisBound;
+  max: AxisBound;
+  onChangeMin: (v: AxisBound) => void;
+  onChangeMax: (v: AxisBound) => void;
+}) {
+  const toStr = (v: AxisBound) => v === 'auto' ? '' : String(v);
+  const fromStr = (s: string): AxisBound => {
+    const trimmed = s.trim();
+    if (trimmed === '') return 'auto';
+    const n = Number(trimmed);
+    return isNaN(n) ? 'auto' : n;
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-white/30 w-3">{label}</span>
+      <input
+        type="text"
+        value={toStr(min)}
+        placeholder="auto"
+        onChange={(e) => onChangeMin(fromStr(e.target.value))}
+        className="w-14 text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-white/60 text-center outline-none placeholder:text-white/20"
+      />
+      <span className="text-[10px] text-white/20">to</span>
+      <input
+        type="text"
+        value={toStr(max)}
+        placeholder="auto"
+        onChange={(e) => onChangeMax(fromStr(e.target.value))}
+        className="w-14 text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-white/60 text-center outline-none placeholder:text-white/20"
+      />
     </div>
   );
 }
