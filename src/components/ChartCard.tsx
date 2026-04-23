@@ -27,6 +27,7 @@ function renderLegend(value: string, entry: { color?: string }) {
   );
 }
 import { formatNumber } from '../utils/format';
+import { downsampleData } from '../engine/downsample';
 
 function CustomTooltip({ active, payload, label }: {
   active?: boolean;
@@ -72,6 +73,11 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     (s) => s.columnKey + '_' + s.datasetId.slice(-6)
   );
 
+  const sampledData = useMemo(() => {
+    if (chart.type === 'bar' || data.length <= 2000) return data;
+    return downsampleData(data, 2000, visibleDataKeys);
+  }, [data, chart.type, visibleDataKeys]);
+
   const yDomain = useMemo((): [number, number] => {
     if (chart.yAxisMin !== 'auto' && chart.yAxisMax !== 'auto') {
       return [chart.yAxisMin, chart.yAxisMax];
@@ -106,7 +112,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
 
   const renderChart = () => {
     const commonProps = {
-      data,
+      data: sampledData,
       margin: { top: 8, right: 8, left: 0, bottom: 0 },
     };
 
@@ -171,7 +177,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
               <Scatter
                 key={`${s.datasetId}-${s.columnKey}`}
                 name={s.label}
-                data={data.map((row) => ({
+                data={sampledData.map((row) => ({
                   [xKey]: row[xKey],
                   [seriesDataKeys[chart.series.indexOf(s)]]: row[seriesDataKeys[chart.series.indexOf(s)]],
                 }))}
