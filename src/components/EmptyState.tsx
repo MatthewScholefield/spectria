@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, type DragEvent } from 'react';
-import { Upload, Sparkles, ClipboardPaste, Check } from 'lucide-react';
+import { Upload, Sparkles, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 
@@ -92,13 +92,15 @@ export function EmptyState() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <button
+        <span
+          role="button"
+          tabIndex={0}
           onClick={() => setShowPastePopover(!showPastePopover)}
-          className="px-6 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all duration-300 flex items-center gap-2.5 cursor-pointer"
+          onKeyDown={(e) => { if (e.key === 'Enter') setShowPastePopover(!showPastePopover); }}
+          className="text-sm font-semibold text-white/60 hover:text-indigo-300 transition-colors duration-200 cursor-pointer select-none"
         >
-          <ClipboardPaste className="w-4 h-4" />
           Paste data
-        </button>
+        </span>
 
         <span className="text-white/30 text-sm">or</span>
 

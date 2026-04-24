@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, ClipboardPaste, Check } from 'lucide-react';
+import { X, Upload, Check } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export function DataInputModal() {
@@ -99,13 +99,15 @@ export function DataInputModal() {
 
             {/* Paste / Upload area */}
             <div className="relative flex gap-2 items-center justify-center py-4">
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={() => setShowPastePopover(!showPastePopover)}
-                className="px-4 py-2 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all duration-300 flex items-center gap-2 cursor-pointer"
+                onKeyDown={(e) => { if (e.key === 'Enter') setShowPastePopover(!showPastePopover); }}
+                className="text-sm font-semibold text-white/60 hover:text-indigo-300 transition-colors duration-200 cursor-pointer select-none"
               >
-                <ClipboardPaste className="w-3.5 h-3.5" />
                 Paste data
-              </button>
+              </span>
               <span className="text-white/30 text-sm">or</span>
               <button
                 onClick={() => fileInputRef.current?.click()}
