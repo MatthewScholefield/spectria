@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, type DragEvent } from 'react';
-import { Upload, Sparkles } from 'lucide-react';
+import { Upload, Sparkles, ClipboardPaste, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 
@@ -7,11 +7,15 @@ export function EmptyState() {
   const addData = useStore((s) => s.addData);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+  const [showPastePopover, setShowPastePopover] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const pasteInputRef = useRef<HTMLTextAreaElement>(null);
 
   const handlePaste = (text: string) => {
     if (text.trim()) {
       addData(text);
+      setShowPastePopover(false);
+      setPasteText('');
     }
   };
 
@@ -36,12 +40,11 @@ export function EmptyState() {
     reader.readAsText(file);
   };
 
-  // Hidden textarea for paste capture
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+    if (showPastePopover) {
+      pasteInputRef.current?.focus();
+    }
+  }, [showPastePopover]);
 
   return (
     <div
@@ -50,18 +53,6 @@ export function EmptyState() {
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
     >
-      {/* Hidden textarea for paste capture */}
-      <textarea
-        ref={textareaRef}
-        className="fixed opacity-0 pointer-events-none w-0 h-0"
-        onBlur={() => setIsFocused(false)}
-        onPaste={(e) => {
-          const text = e.clipboardData.getData('text');
-          handlePaste(text);
-        }}
-        onChange={() => {}}
-      />
-
       {/* Pulse ring */}
       <div className="relative mb-8">
         <div className="absolute inset-0 w-24 h-24 rounded-full bg-indigo-500/10 pulse-ring" />
@@ -96,14 +87,20 @@ export function EmptyState() {
 
       {/* Action area */}
       <motion.div
-        className="flex gap-2 items-center"
+        className="flex gap-2 items-center relative"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <p className={`text-sm font-medium transition-all duration-300 ${isFocused ? 'text-indigo-300' : 'text-white/60'}`}>
-          Paste data <span className="text-white/30 font-normal">or</span>
-        </p>
+        <button
+          onClick={() => setShowPastePopover(!showPastePopover)}
+          className="px-6 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all duration-300 flex items-center gap-2.5 cursor-pointer"
+        >
+          <ClipboardPaste className="w-4 h-4" />
+          Paste data
+        </button>
+
+        <span className="text-white/30 text-sm">or</span>
 
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -120,6 +117,42 @@ export function EmptyState() {
           className="hidden"
           onChange={handleFileChange}
         />
+
+        {/* Paste popover */}
+        <AnimatePresence>
+          {showPastePopover && (
+            <motion.div
+              className="absolute bottom-full left-0 mb-3 w-80 glass-card p-3 z-30"
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-white/40 uppercase tracking-wider">Paste your data</span>
+                <button
+                  onClick={() => handlePaste(pasteText)}
+                  disabled={!pasteText.trim()}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  <Check className="w-3 h-3" />
+                  Done
+                </button>
+              </div>
+              <textarea
+                ref={pasteInputRef}
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.metaKey) handlePaste(pasteText);
+                }}
+                placeholder="Tap here to paste..."
+                className="w-full h-32 text-xs bg-white/5 border border-white/10 rounded-lg p-2 text-white/70 placeholder:text-white/25 resize-none focus:outline-none focus:border-indigo-500/40 transition-colors"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Supported formats hint */}
