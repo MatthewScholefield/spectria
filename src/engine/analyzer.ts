@@ -79,6 +79,8 @@ export function generateCharts(
       yAxisMax: 'auto' as const,
       xAxisMin: 'auto' as const,
       xAxisMax: 'auto' as const,
+      yScale: 'linear' as const,
+      xScale: 'linear' as const,
     };
   });
 }
@@ -122,6 +124,8 @@ export function mergeDatasetIntoCharts(
         yAxisMax: 'auto',
         xAxisMin: 'auto',
         xAxisMax: 'auto',
+        yScale: 'linear',
+        xScale: 'linear',
       });
     }
   }

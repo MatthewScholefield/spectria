@@ -31,6 +31,8 @@ export interface SeriesConfig {
 
 export type AxisBound = 'auto' | number;
 
+export type AxisScale = 'linear' | 'log' | 'sqrt';
+
 export interface ChartConfig {
   id: string;
   title: string;
@@ -41,4 +43,6 @@ export interface ChartConfig {
   yAxisMax: AxisBound;
   xAxisMin: AxisBound;
   xAxisMax: AxisBound;
+  yScale: AxisScale;
+  xScale: AxisScale;
 }

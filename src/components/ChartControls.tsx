@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import type { ChartConfig, ChartType, AxisBound } from '../engine/types';
+import type { ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
 import { Eye, EyeOff } from 'lucide-react';
 
 const CHART_TYPES: { value: ChartType; label: string }[] = [
@@ -19,6 +19,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
   const updateSeriesColor = useStore((s) => s.updateSeriesColor);
   const updateSeriesLabel = useStore((s) => s.updateSeriesLabel);
   const updateAxisBound = useStore((s) => s.updateAxisBound);
+  const updateAxisScale = useStore((s) => s.updateAxisScale);
 
   // Collect all available column keys across datasets for X-axis selection
   const allXKeys = datasets.length > 0
@@ -73,7 +74,9 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
       {/* Axis range */}
       <div className="space-y-1.5">
         <span className="text-[10px] text-white/30 uppercase tracking-wider">Axis Range</span>
+        <ScaleRow label="Y" scale={chart.yScale} onChange={(v) => updateAxisScale(chart.id, 'yScale', v)} />
         <AxisRow label="Y" min={chart.yAxisMin} max={chart.yAxisMax} onChangeMin={(v) => updateAxisBound(chart.id, 'yAxisMin', v)} onChangeMax={(v) => updateAxisBound(chart.id, 'yAxisMax', v)} />
+        <ScaleRow label="X" scale={chart.xScale} onChange={(v) => updateAxisScale(chart.id, 'xScale', v)} />
         <AxisRow label="X" min={chart.xAxisMin} max={chart.xAxisMax} onChangeMin={(v) => updateAxisBound(chart.id, 'xAxisMin', v)} onChangeMax={(v) => updateAxisBound(chart.id, 'xAxisMax', v)} />
       </div>
 
@@ -103,6 +106,39 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               className="flex-1 text-xs bg-transparent py-0.5"
             />
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const SCALES: { value: AxisScale; label: string }[] = [
+  { value: 'linear', label: 'Linear' },
+  { value: 'log', label: 'Log' },
+  { value: 'sqrt', label: 'Sqrt' },
+];
+
+function ScaleRow({ label, scale, onChange }: {
+  label: string;
+  scale: AxisScale;
+  onChange: (v: AxisScale) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-white/30 w-3">{label}</span>
+      <div className="flex gap-0.5 bg-white/5 rounded-md p-0.5">
+        {SCALES.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => onChange(s.value)}
+            className={`px-2 py-0.5 text-[10px] rounded transition-all cursor-pointer ${
+              scale === s.value
+                ? 'bg-white/10 text-white/80'
+                : 'text-white/30 hover:text-white/50'
+            }`}
+          >
+            {s.label}
+          </button>
         ))}
       </div>
     </div>

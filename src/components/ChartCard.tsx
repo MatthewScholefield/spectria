@@ -117,8 +117,8 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     };
 
     const xKey = chart.xKey;
-    const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(xDomain ? { domain: xDomain, allowDataOverflow: true } : {}) };
-    const yAxisProps = { tick: { fontSize: 11 }, tickLine: false, axisLine: false, width: 50, tickFormatter: formatNumber, domain: yDomain, allowDataOverflow: true };
+    const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(chart.xScale !== 'linear' ? { scale: chart.xScale } : {}), ...(xDomain ? { domain: xDomain, allowDataOverflow: true } : {}) };
+    const yAxisProps = { tick: { fontSize: 11 }, tickLine: false, axisLine: false, width: 50, tickFormatter: formatNumber, domain: yDomain, allowDataOverflow: true, ...(chart.yScale !== 'linear' ? { scale: chart.yScale } : {}) };
 
     switch (chart.type) {
       case 'area':
