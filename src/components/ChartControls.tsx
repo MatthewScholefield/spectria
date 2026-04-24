@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound } from '../engine/types';
 import { Eye, EyeOff } from 'lucide-react';
@@ -126,21 +127,48 @@ function AxisRow({ label, min, max, onChangeMin, onChangeMax }: {
   return (
     <div className="flex items-center gap-2">
       <span className="text-[10px] text-white/30 w-3">{label}</span>
-      <input
-        type="text"
+      <InputWithBlurCommit
         value={toStr(min)}
         placeholder="auto"
-        onChange={(e) => onChangeMin(fromStr(e.target.value))}
+        onCommit={(s) => onChangeMin(fromStr(s))}
         className="w-14 text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-white/60 text-center outline-none placeholder:text-white/20"
       />
       <span className="text-[10px] text-white/20">to</span>
-      <input
-        type="text"
+      <InputWithBlurCommit
         value={toStr(max)}
         placeholder="auto"
-        onChange={(e) => onChangeMax(fromStr(e.target.value))}
+        onCommit={(s) => onChangeMax(fromStr(s))}
         className="w-14 text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-white/60 text-center outline-none placeholder:text-white/20"
       />
     </div>
+  );
+}
+
+function InputWithBlurCommit({ value, placeholder, onCommit, className }: {
+  value: string;
+  placeholder: string;
+  onCommit: (raw: string) => void;
+  className: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [local, setLocal] = useState(value);
+  const focused = useRef(false);
+
+  if (value !== local && !focused.current) {
+    setLocal(value);
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={local}
+      placeholder={placeholder}
+      onChange={(e) => setLocal(e.target.value)}
+      onFocus={() => { focused.current = true; }}
+      onBlur={() => { focused.current = false; onCommit(local); }}
+      onKeyDown={(e) => { if (e.key === 'Enter') inputRef.current?.blur(); }}
+      className={className}
+    />
   );
 }
