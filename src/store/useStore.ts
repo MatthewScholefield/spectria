@@ -178,38 +178,63 @@ export const useStore = create<AppState>((set, get) => ({
     const chart = state.charts.find((c) => c.id === chartId);
     if (!chart) return [];
 
-    // Only consider datasets that have series in this chart
     const relevantDatasetIds = new Set(chart.series.map((s) => s.datasetId));
     const relevantDatasets = state.datasets.filter((d) => relevantDatasetIds.has(d.id));
 
-    const maxRows = Math.max(
-      ...relevantDatasets.map((d) => d.table.rowCount),
-      0
-    );
-
-    const rows: Record<string, unknown>[] = [];
-    for (let i = 0; i < maxRows; i++) {
-      const row: Record<string, unknown> = {};
-
-      if (chart.xKey === '__rowIndex__') {
-        row['__rowIndex__'] = i;
-      }
-
-      for (const dataset of relevantDatasets) {
-        // X-axis from each dataset
-        if (chart.xKey !== '__rowIndex__') {
-          const xCol = dataset.table.columns.find((c) => c.key === chart.xKey);
-          if (xCol && i < xCol.values.length) {
-            row[chart.xKey] = xCol.values[i];
+    if (chart.xKey === '__rowIndex__') {
+      // No real X-axis column — merge by position
+      const maxRows = Math.max(...relevantDatasets.map((d) => d.table.rowCount), 0);
+      const rows: Record<string, unknown>[] = [];
+      for (let i = 0; i < maxRows; i++) {
+        const row: Record<string, unknown> = { '__rowIndex__': i };
+        for (const dataset of relevantDatasets) {
+          for (const series of chart.series) {
+            if (series.datasetId !== dataset.id) continue;
+            const col = dataset.table.columns.find((c) => c.key === series.columnKey);
+            if (col && i < col.values.length) {
+              row[series.columnKey + '_' + series.datasetId.slice(-6)] = col.values[i];
+            }
           }
         }
+        rows.push(row);
+      }
+      return rows;
+    }
 
-        // Series values
+    // Join on X-axis value across datasets
+    const datasetXMaps = new Map<string, Map<string | number, number>>();
+    const allXValues = new Set<string | number>();
+
+    for (const dataset of relevantDatasets) {
+      const xCol = dataset.table.columns.find((c) => c.key === chart.xKey);
+      if (!xCol) continue;
+      const xMap = new Map<string | number, number>();
+      for (let i = 0; i < xCol.values.length; i++) {
+        const val = xCol.values[i] as string | number;
+        xMap.set(val, i);
+        allXValues.add(val);
+      }
+      datasetXMaps.set(dataset.id, xMap);
+    }
+
+    const sortedXValues = Array.from(allXValues).sort((a, b) => {
+      if (typeof a === 'number' && typeof b === 'number') return a - b;
+      return String(a).localeCompare(String(b));
+    });
+
+    const rows: Record<string, unknown>[] = [];
+    for (const xValue of sortedXValues) {
+      const row: Record<string, unknown> = { [chart.xKey]: xValue };
+      for (const dataset of relevantDatasets) {
+        const xMap = datasetXMaps.get(dataset.id);
+        if (!xMap) continue;
+        const rowIndex = xMap.get(xValue as string | number);
+        if (rowIndex === undefined) continue;
         for (const series of chart.series) {
           if (series.datasetId !== dataset.id) continue;
           const col = dataset.table.columns.find((c) => c.key === series.columnKey);
-          if (col && i < col.values.length) {
-            row[series.columnKey + '_' + series.datasetId.slice(-6)] = col.values[i];
+          if (col && rowIndex < col.values.length) {
+            row[series.columnKey + '_' + series.datasetId.slice(-6)] = col.values[rowIndex];
           }
         }
       }
