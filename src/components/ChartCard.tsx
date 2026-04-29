@@ -101,12 +101,26 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     ];
   }, [data, visibleDataKeys, chart.yAxisMin, chart.yAxisMax]);
 
-  const xDomain = useMemo((): [number | 'auto', number | 'auto'] | undefined => {
-    const min = chart.xAxisMin === 'auto' ? 'auto' as const : chart.xAxisMin;
-    const max = chart.xAxisMax === 'auto' ? 'auto' as const : chart.xAxisMax;
-    if (min === 'auto' && max === 'auto') return undefined;
-    return [min, max];
-  }, [chart.xAxisMin, chart.xAxisMax]);
+  const xDomain = useMemo((): [number, number] | undefined => {
+    if (chart.xAxisMin === 'auto' && chart.xAxisMax === 'auto') return undefined;
+    let min = Infinity;
+    let max = -Infinity;
+    for (const row of data) {
+      const val = row[chart.xKey];
+      if (typeof val === 'number' && isFinite(val)) {
+        if (val < min) min = val;
+        if (val > max) max = val;
+      }
+    }
+    if (min === Infinity) return [0, 1];
+    const range = max - min || Math.abs(max) || 1;
+    const autoMin = min - 0.05 * range;
+    const autoMax = max + 0.05 * range;
+    return [
+      chart.xAxisMin === 'auto' ? autoMin : chart.xAxisMin,
+      chart.xAxisMax === 'auto' ? autoMax : chart.xAxisMax,
+    ];
+  }, [data, chart.xKey, chart.xAxisMin, chart.xAxisMax]);
 
   const renderChart = () => {
     const commonProps = {
@@ -115,7 +129,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     };
 
     const xKey = chart.xKey;
-    const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(chart.xScale !== 'linear' ? { scale: chart.xScale } : {}), ...(xDomain ? { domain: xDomain, allowDataOverflow: true } : {}) };
+    const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(chart.xScale !== 'linear' ? { scale: chart.xScale } : {}), ...(xDomain ? { type: 'number' as const, domain: xDomain, allowDataOverflow: true } : {}) };
     const yAxisProps = { tick: { fontSize: 11 }, tickLine: false, axisLine: false, width: 50, tickFormatter: formatNumber, domain: yDomain, allowDataOverflow: true, ...(chart.yScale !== 'linear' ? { scale: chart.yScale } : {}) };
 
     switch (chart.type) {
