@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
+import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale, SeriesConfig } from '../engine/types';
 import { parseRawData } from '../engine/parser';
-import { generateCharts, mergeDatasetIntoCharts } from '../engine/analyzer';
+import { generateCharts, mergeDatasetIntoCharts, PRIMARY_PALETTE } from '../engine/analyzer';
 import { generateId, generateDatasetName } from '../utils/format';
 
 type GridColumns = 1 | 2 | 3;
@@ -20,9 +20,14 @@ interface AppState {
   updateChartTitle: (chartId: string, title: string) => void;
   updateChartType: (chartId: string, type: ChartType) => void;
   updateChartXKey: (chartId: string, xKey: string) => void;
-  toggleSeriesVisibility: (chartId: string, seriesIndex: number) => void;
-  updateSeriesColor: (chartId: string, seriesIndex: number, color: string) => void;
-  updateSeriesLabel: (chartId: string, seriesIndex: number, label: string) => void;
+  toggleSeriesVisibility: (chartId: string, datasetId: string, columnKey: string) => void;
+  updateSeriesColor: (chartId: string, datasetId: string, columnKey: string, color: string) => void;
+  updateSeriesLabel: (chartId: string, datasetId: string, columnKey: string, label: string) => void;
+  addSeries: (chartId: string, series: SeriesConfig) => void;
+  removeSeries: (chartId: string, datasetId: string, columnKey: string) => void;
+  deleteChart: (chartId: string) => void;
+  createChart: (config?: Partial<ChartConfig>) => string;
+  getNextSeriesColor: (chartId: string) => string;
   updateAxisBound: (chartId: string, key: 'yAxisMin' | 'yAxisMax' | 'xAxisMin' | 'xAxisMax', value: AxisBound) => void;
   updateAxisScale: (chartId: string, key: 'yScale' | 'xScale', value: AxisScale) => void;
 
@@ -117,40 +122,103 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
-  toggleSeriesVisibility: (chartId: string, seriesIndex: number) => {
+  toggleSeriesVisibility: (chartId: string, datasetId: string, columnKey: string) => {
     set((state) => ({
       charts: state.charts.map((c) => {
         if (c.id !== chartId) return c;
-        const series = c.series.map((s, i) =>
-          i === seriesIndex ? { ...s, visible: !s.visible } : s
+        const series = c.series.map((s) =>
+          s.datasetId === datasetId && s.columnKey === columnKey
+            ? { ...s, visible: !s.visible } : s
         );
         return { ...c, series };
       }),
     }));
   },
 
-  updateSeriesColor: (chartId: string, seriesIndex: number, color: string) => {
+  updateSeriesColor: (chartId: string, datasetId: string, columnKey: string, color: string) => {
     set((state) => ({
       charts: state.charts.map((c) => {
         if (c.id !== chartId) return c;
-        const series = c.series.map((s, i) =>
-          i === seriesIndex ? { ...s, color } : s
+        const series = c.series.map((s) =>
+          s.datasetId === datasetId && s.columnKey === columnKey
+            ? { ...s, color } : s
         );
         return { ...c, series };
       }),
     }));
   },
 
-  updateSeriesLabel: (chartId: string, seriesIndex: number, label: string) => {
+  updateSeriesLabel: (chartId: string, datasetId: string, columnKey: string, label: string) => {
     set((state) => ({
       charts: state.charts.map((c) => {
         if (c.id !== chartId) return c;
-        const series = c.series.map((s, i) =>
-          i === seriesIndex ? { ...s, label } : s
+        const series = c.series.map((s) =>
+          s.datasetId === datasetId && s.columnKey === columnKey
+            ? { ...s, label } : s
         );
         return { ...c, series };
       }),
     }));
+  },
+
+  addSeries: (chartId: string, series: SeriesConfig) => {
+    set((state) => ({
+      charts: state.charts.map((c) => {
+        if (c.id !== chartId) return c;
+        const exists = c.series.some(
+          (s) => s.datasetId === series.datasetId && s.columnKey === series.columnKey
+        );
+        if (exists) return c;
+        return { ...c, series: [...c.series, series] };
+      }),
+    }));
+  },
+
+  removeSeries: (chartId: string, datasetId: string, columnKey: string) => {
+    set((state) => {
+      const updated = state.charts.map((c) => {
+        if (c.id !== chartId) return c;
+        return {
+          ...c,
+          series: c.series.filter(
+            (s) => !(s.datasetId === datasetId && s.columnKey === columnKey)
+          ),
+        };
+      }).filter((c) => c.series.length > 0);
+      return { charts: updated };
+    });
+  },
+
+  deleteChart: (chartId: string) => {
+    set((state) => ({
+      charts: state.charts.filter((c) => c.id !== chartId),
+    }));
+  },
+
+  createChart: (config?: Partial<ChartConfig>) => {
+    const id = generateId();
+    const chart: ChartConfig = {
+      id,
+      title: config?.title ?? 'New Chart',
+      type: config?.type ?? 'line',
+      xKey: config?.xKey ?? '__rowIndex__',
+      series: config?.series ?? [],
+      yAxisMin: config?.yAxisMin ?? 'auto',
+      yAxisMax: config?.yAxisMax ?? 'auto',
+      xAxisMin: config?.xAxisMin ?? 'auto',
+      xAxisMax: config?.xAxisMax ?? 'auto',
+      yScale: config?.yScale ?? 'linear',
+      xScale: config?.xScale ?? 'linear',
+    };
+    set((state) => ({ charts: [...state.charts, chart] }));
+    return id;
+  },
+
+  getNextSeriesColor: (chartId: string) => {
+    const chart = get().charts.find((c) => c.id === chartId);
+    const usedColors = new Set(chart?.series.map((s) => s.color) ?? []);
+    const available = PRIMARY_PALETTE.find((c) => !usedColors.has(c));
+    return available ?? PRIMARY_PALETTE[0];
   },
 
   updateAxisBound: (chartId: string, key: 'yAxisMin' | 'yAxisMax' | 'xAxisMin' | 'xAxisMax', value: AxisBound) => {

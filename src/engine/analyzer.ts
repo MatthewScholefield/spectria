@@ -1,14 +1,5 @@
 import type { DataTable, ChartConfig, SeriesConfig } from './types';
-
-const PRIMARY_PALETTE = [
-  '#6366f1', '#f43f5e', '#10b981', '#f59e0b',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
-];
-
-const SECONDARY_PALETTE = [
-  '#818cf8', '#fb7185', '#34d399', '#fbbf24',
-  '#60a5fa', '#a78bfa', '#f472b6', '#2dd4bf',
-];
+import { generateId } from '../utils/format';
 
 function detectIndexColumn(table: DataTable): string | null {
   if (table.columns.length === 0) return null;
@@ -36,6 +27,16 @@ function detectIndexColumn(table: DataTable): string | null {
 
   return null;
 }
+
+export const PRIMARY_PALETTE = [
+  '#6366f1', '#f43f5e', '#10b981', '#f59e0b',
+  '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
+];
+
+export const SECONDARY_PALETTE = [
+  '#818cf8', '#fb7185', '#34d399', '#fbbf24',
+  '#60a5fa', '#a78bfa', '#f472b6', '#2dd4bf',
+];
 
 function getValueColumns(table: DataTable, indexKey: string | null) {
   return table.columns.filter((c) => {
@@ -70,7 +71,7 @@ export function generateCharts(
     };
 
     return {
-      id: `chart-${col.key}`,
+      id: generateId(),
       title: col.header,
       type: 'line' as const,
       xKey: indexKey ?? '__rowIndex__',
@@ -100,7 +101,7 @@ export function mergeDatasetIntoCharts(
   for (const col of valueCols) {
     const colIndex = valueCols.indexOf(col);
     const existingChart = updatedCharts.find(
-      (c) => c.id === `chart-${col.key}`
+      (c) => c.series.some((s) => s.columnKey === col.key)
     );
 
     const newSeries: SeriesConfig = {
@@ -115,7 +116,7 @@ export function mergeDatasetIntoCharts(
       existingChart.series = [...existingChart.series, newSeries];
     } else {
       updatedCharts.push({
-        id: `chart-${col.key}`,
+        id: generateId(),
         title: col.header,
         type: 'line',
         xKey: indexKey ?? '__rowIndex__',

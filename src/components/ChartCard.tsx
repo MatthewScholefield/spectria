@@ -64,14 +64,12 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
 
   const visibleSeries = chart.series.filter((s) => s.visible);
 
-  // Build unique data keys for each series (columnKey + short datasetId)
-  const seriesDataKeys = chart.series.map(
-    (s) => s.columnKey + '_' + s.datasetId.slice(-6)
+  // Build lookup from series object to its data key
+  const seriesKeyMap = new Map(
+    chart.series.map((s) => [s, s.columnKey + '_' + s.datasetId.slice(-6)])
   );
 
-  const visibleDataKeys = visibleSeries.map(
-    (s) => s.columnKey + '_' + s.datasetId.slice(-6)
-  );
+  const visibleDataKeys = visibleSeries.map((s) => seriesKeyMap.get(s)!);
 
   const sampledData = useMemo(() => {
     if (chart.type === 'bar' || data.length <= 2000) return data;
@@ -132,7 +130,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
               <Area
                 key={`${s.datasetId}-${s.columnKey}`}
                 type="monotone"
-                dataKey={seriesDataKeys[chart.series.indexOf(s)]}
+                dataKey={seriesKeyMap.get(s)!}
                 name={s.label}
                 stroke={s.color}
                 fill={s.color}
@@ -156,7 +154,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             {visibleSeries.map((s) => (
               <Bar
                 key={`${s.datasetId}-${s.columnKey}`}
-                dataKey={seriesDataKeys[chart.series.indexOf(s)]}
+                dataKey={seriesKeyMap.get(s)!}
                 name={s.label}
                 fill={s.color}
                 radius={[4, 4, 0, 0]}
@@ -179,7 +177,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
                 name={s.label}
                 data={sampledData.map((row) => ({
                   [xKey]: row[xKey],
-                  [seriesDataKeys[chart.series.indexOf(s)]]: row[seriesDataKeys[chart.series.indexOf(s)]],
+                  [seriesKeyMap.get(s)!]: row[seriesKeyMap.get(s)!],
                 }))}
                 fill={s.color}
               />
@@ -199,7 +197,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
               <Line
                 key={`${s.datasetId}-${s.columnKey}`}
                 type="monotone"
-                dataKey={seriesDataKeys[chart.series.indexOf(s)]}
+                dataKey={seriesKeyMap.get(s)!}
                 name={s.label}
                 stroke={s.color}
                 strokeWidth={2}
@@ -245,9 +243,15 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
 
       {/* Chart */}
       <div className="px-2 pb-3" style={{ height: 280 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
-        </ResponsiveContainer>
+        {visibleSeries.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-white/20 text-xs">
+            No visible traces — add a trace or show an existing series
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart()}
+          </ResponsiveContainer>
+        )}
       </div>
     </motion.div>
   );

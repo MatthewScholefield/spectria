@@ -10,6 +10,8 @@ export function Toolbar() {
   const setShowDataModal = useStore((s) => s.setShowDataModal);
   const renameDataset = useStore((s) => s.renameDataset);
   const removeDataset = useStore((s) => s.removeDataset);
+  const createChart = useStore((s) => s.createChart);
+  const setEditingChartId = useStore((s) => s.setEditingChartId);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
@@ -101,6 +103,20 @@ export function Toolbar() {
           <Columns3 className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* New chart button */}
+      {datasets.length > 0 && (
+        <button
+          onClick={() => {
+            const id = createChart();
+            setEditingChartId(id);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          New Chart
+        </button>
+      )}
 
       {/* Add data button */}
       <button
