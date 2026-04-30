@@ -53,7 +53,6 @@ function getSeriesColor(colIndex: number, datasetIndex: number): string {
 export function generateCharts(
   table: DataTable,
   datasetId: string,
-  datasetName: string,
   datasetIndex: number
 ): ChartConfig[] {
   const indexKey = detectIndexColumn(table);
@@ -65,7 +64,6 @@ export function generateCharts(
     const series: SeriesConfig = {
       datasetId,
       columnKey: col.key,
-      label: `${datasetName} · ${col.header}`,
       color: getSeriesColor(i, datasetIndex),
       visible: true,
     };
@@ -90,7 +88,6 @@ export function mergeDatasetIntoCharts(
   existingCharts: ChartConfig[],
   table: DataTable,
   datasetId: string,
-  datasetName: string,
   datasetIndex: number
 ): ChartConfig[] {
   const indexKey = detectIndexColumn(table);
@@ -107,7 +104,6 @@ export function mergeDatasetIntoCharts(
     const newSeries: SeriesConfig = {
       datasetId,
       columnKey: col.key,
-      label: `${datasetName} · ${col.header}`,
       color: getSeriesColor(colIndex, datasetIndex),
       visible: true,
     };

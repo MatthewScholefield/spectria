@@ -57,9 +57,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     let newCharts: ChartConfig[];
     if (state.datasets.length === 0) {
-      newCharts = generateCharts(table, datasetId, datasetName, 0);
+      newCharts = generateCharts(table, datasetId, 0);
     } else {
-      newCharts = mergeDatasetIntoCharts(state.charts, table, datasetId, datasetName, state.datasets.length);
+      newCharts = mergeDatasetIntoCharts(state.charts, table, datasetId, state.datasets.length);
     }
 
     set({
@@ -87,14 +87,6 @@ export const useStore = create<AppState>((set, get) => ({
       datasets: state.datasets.map((d) =>
         d.id === id ? { ...d, name } : d
       ),
-      charts: state.charts.map((chart) => ({
-        ...chart,
-        series: chart.series.map((s) =>
-          s.datasetId === id
-            ? { ...s, label: `${name} · ${s.columnKey}` }
-            : s
-        ),
-      })),
     }));
   },
 
@@ -154,7 +146,7 @@ export const useStore = create<AppState>((set, get) => ({
         if (c.id !== chartId) return c;
         const series = c.series.map((s) =>
           s.datasetId === datasetId && s.columnKey === columnKey
-            ? { ...s, label } : s
+            ? { ...s, customLabel: label || undefined } : s
         );
         return { ...c, series };
       }),

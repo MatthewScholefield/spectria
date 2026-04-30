@@ -28,6 +28,7 @@ function renderLegend(value: string, entry: { color?: string }) {
 }
 import { formatNumber } from '../utils/format';
 import { downsampleData } from '../engine/downsample';
+import { getDisplayLabel } from '../engine/labels';
 
 function CustomTooltip({ active, payload, label }: {
   active?: boolean;
@@ -67,6 +68,10 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
   // Build lookup from series object to its data key
   const seriesKeyMap = new Map(
     chart.series.map((s) => [s, s.columnKey + '_' + s.datasetId.slice(-6)])
+  );
+
+  const displayLabels = new Map(
+    chart.series.map((s) => [s, getDisplayLabel(chart.series, s, datasets)])
   );
 
   const visibleDataKeys = visibleSeries.map((s) => seriesKeyMap.get(s)!);
@@ -145,7 +150,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
                 key={`${s.datasetId}-${s.columnKey}`}
                 type="monotone"
                 dataKey={seriesKeyMap.get(s)!}
-                name={s.label}
+                name={displayLabels.get(s)!}
                 stroke={s.color}
                 fill={s.color}
                 fillOpacity={0.1}
@@ -169,7 +174,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
               <Bar
                 key={`${s.datasetId}-${s.columnKey}`}
                 dataKey={seriesKeyMap.get(s)!}
-                name={s.label}
+                name={displayLabels.get(s)!}
                 fill={s.color}
                 radius={[4, 4, 0, 0]}
               />
@@ -188,7 +193,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             {visibleSeries.map((s) => (
               <Scatter
                 key={`${s.datasetId}-${s.columnKey}`}
-                name={s.label}
+                name={displayLabels.get(s)!}
                 data={sampledData.map((row) => ({
                   [xKey]: row[xKey],
                   [seriesKeyMap.get(s)!]: row[seriesKeyMap.get(s)!],
@@ -212,7 +217,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
                 key={`${s.datasetId}-${s.columnKey}`}
                 type="monotone"
                 dataKey={seriesKeyMap.get(s)!}
-                name={s.label}
+                name={displayLabels.get(s)!}
                 stroke={s.color}
                 strokeWidth={2}
                 dot={false}

@@ -24,7 +24,7 @@ export type ChartType = 'line' | 'area' | 'bar' | 'scatter';
 export interface SeriesConfig {
   datasetId: string;
   columnKey: string;
-  label: string;
+  customLabel?: string;
   color: string;
   visible: boolean;
 }

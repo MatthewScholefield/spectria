@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
+import { computeDefaultLabel } from '../engine/labels';
 import { Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
 
 const CHART_TYPES: { value: ChartType; label: string }[] = [
@@ -55,14 +56,13 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
     return Array.from(keySet.entries());
   })();
 
-  const handleAddTrace = (datasetId: string, columnKey: string, header: string) => {
+  const handleAddTrace = (datasetId: string, columnKey: string) => {
     const ds = datasets.find((d) => d.id === datasetId);
     if (!ds) return;
     const color = getNextSeriesColor(chart.id);
     addSeries(chart.id, {
       datasetId,
       columnKey,
-      label: `${ds.name} · ${header}`,
       color,
       visible: true,
     });
@@ -148,11 +148,11 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               value={series.color}
               onChange={(e) => updateSeriesColor(chart.id, series.datasetId, series.columnKey, e.target.value)}
             />
-            <input
-              type="text"
-              value={series.label}
-              onChange={(e) => updateSeriesLabel(chart.id, series.datasetId, series.columnKey, e.target.value)}
-              className="flex-1 text-xs bg-transparent py-0.5"
+            <InputWithBlurCommit
+              value={series.customLabel ?? ''}
+              placeholder={computeDefaultLabel(chart.series, series, datasets)}
+              onCommit={(raw) => updateSeriesLabel(chart.id, series.datasetId, series.columnKey, raw)}
+              className="flex-1 text-xs bg-transparent py-0.5 placeholder:text-white/30"
             />
             <button
               onClick={() => removeSeries(chart.id, series.datasetId, series.columnKey)}
@@ -215,7 +215,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
                     <button
                       key={col.key}
                       onClick={() => {
-                        handleAddTrace(ds.id, col.key, col.header);
+                        handleAddTrace(ds.id, col.key);
                       }}
                       className="w-full text-left px-2 py-1.5 text-[11px] text-white/50 hover:text-white/80 hover:bg-white/5 rounded-md transition-all cursor-pointer"
                     >
