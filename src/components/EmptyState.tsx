@@ -135,7 +135,7 @@ export function EmptyState() {
         <AnimatePresence>
           {showPastePopover && (
             <motion.div
-              className="absolute bottom-full left-0 mb-3 w-80 glass-card p-3 z-30"
+              className="absolute bottom-full left-0 mb-3 w-80 glass-card p-3 z-30 bg-[rgba(15,15,35,0.85)]"
               initial={{ opacity: 0, y: 8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
@@ -161,7 +161,7 @@ export function EmptyState() {
                   if (e.key === 'Enter' && e.metaKey) handlePaste(pasteText);
                 }}
                 placeholder="Tap here to paste..."
-                className="w-full h-32 text-xs bg-white/5 border border-white/10 rounded-lg p-2 text-white/70 placeholder:text-white/25 resize-none focus:outline-none focus:border-indigo-500/40 transition-colors"
+                className="w-full h-32 text-xs bg-white/5 border border-white/10 rounded-lg p-2 text-white/90 placeholder:text-white/35 resize-none focus:outline-none focus:border-indigo-500/40 transition-colors"
               />
             </motion.div>
           )}
