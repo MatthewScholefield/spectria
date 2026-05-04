@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Server, FolderOpen, Play, Loader2, AlertCircle, Check } from 'lucide-react';
+import { X, Server, FolderOpen, Play, Loader2, AlertCircle, Check, Info, ChevronDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fetchProjects, fetchRuns } from '../sources/keras/api';
 import { connectRun } from '../hooks/useStreamSource';
@@ -60,6 +60,7 @@ export function ConnectSourceModal() {
   const [runs, setRuns] = useState<RunInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const handleFetchProjects = useCallback(async () => {
     setLoading(true);
@@ -142,7 +143,12 @@ export function ConnectSourceModal() {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-              <h2 className="text-sm font-medium text-white/80">Connect Live Source</h2>
+              <div>
+                <h2 className="text-sm font-medium text-white/80">Connect Live Source</h2>
+                <p className="text-[11px] text-white/30 mt-0.5">
+                  Stream training metrics from a live server in real time
+                </p>
+              </div>
               <button
                 onClick={() => setShowConnectModal(false)}
                 className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
@@ -152,6 +158,54 @@ export function ConnectSourceModal() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Supported sources info */}
+              <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3.5 py-3">
+                <button
+                  onClick={() => setShowInfo(!showInfo)}
+                  className="w-full flex items-center gap-2 text-left cursor-pointer"
+                >
+                  <Info className="w-3.5 h-3.5 text-indigo-300/60 shrink-0" />
+                  <span className="text-[11px] text-white/40 flex-1">
+                    Supported: <span className="text-white/60">Keras training metrics servers</span>
+                  </span>
+                  <ChevronDown className={`w-3 h-3 text-white/20 transition-transform ${showInfo ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                  {showInfo && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 pt-3 border-t border-white/5 space-y-2 text-[11px] text-white/35 leading-relaxed">
+                        <p>
+                          Your server must implement these endpoints:
+                        </p>
+                        <div className="font-mono text-[10px] space-y-1 bg-black/20 rounded-md px-3 py-2">
+                          <p><span className="text-indigo-300/50">GET</span> /api/projects</p>
+                          <p><span className="text-indigo-300/50">GET</span> /api/projects/<span className="text-white/25">{'{name}'}</span>/runs</p>
+                          <p><span className="text-indigo-300/50">GET</span> /api/projects/<span className="text-white/25">{'{name}'}</span>/runs/<span className="text-white/25">{'{id}'}</span>/data</p>
+                          <p><span className="text-green-300/50">SSE</span> /api/projects/<span className="text-white/25">{'{name}'}</span>/runs/<span className="text-white/25">{'{id}'}</span>/events</p>
+                        </div>
+                        <p>
+                          SSE events use type <code className="text-white/50 bg-white/5 px-1 rounded">row</code> with JSON
+                          payload (one metric row). Send <code className="text-white/50 bg-white/5 px-1 rounded">complete</code> to end the stream.
+                        </p>
+                        <a
+                          href="https://github.com/matthewscholeman/spectra#live-data-sources"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block text-indigo-300/60 hover:text-indigo-300/90 underline underline-offset-2 transition-colors"
+                        >
+                          View full documentation on GitHub
+                        </a>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               {/* Server URL */}
               <div>
                 <label className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 block">
