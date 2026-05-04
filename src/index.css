@@ -87,7 +87,7 @@ body {
   pointer-events: none;
 }
 
-/* Glass card */
+/* Glass card style */
 .glass-card {
   background: var(--color-glass);
   backdrop-filter: blur(24px);
