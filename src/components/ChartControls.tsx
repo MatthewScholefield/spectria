@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
-import { computeDefaultLabel } from '../engine/labels';
+import { computeDefaultLabel, getDisplayLabel } from '../engine/labels';
 import { computeDisplayNames, getFullName } from '../utils/format';
 import { Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
 
@@ -152,10 +152,13 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               onChange={(e) => updateSeriesColor(chart.id, series.datasetId, series.columnKey, e.target.value)}
             />
             <InputWithBlurCommit
-              value={series.customLabel ?? ''}
-              placeholder={computeDefaultLabel(chart.series, series, datasets, datasetDisplayNames)}
-              onCommit={(raw) => updateSeriesLabel(chart.id, series.datasetId, series.columnKey, raw)}
-              className="flex-1 text-xs bg-transparent py-0.5 placeholder:text-white/30"
+              value={getDisplayLabel(chart.series, series, datasets, datasetDisplayNames)}
+              onCommit={(raw) => {
+                const defaultLabel = computeDefaultLabel(chart.series, series, datasets, datasetDisplayNames);
+                const effective = (!raw || raw === defaultLabel) ? '' : raw;
+                updateSeriesLabel(chart.id, series.datasetId, series.columnKey, effective);
+              }}
+              className="flex-1 text-xs bg-transparent py-0.5"
             />
             <button
               onClick={() => removeSeries(chart.id, series.datasetId, series.columnKey)}
@@ -305,7 +308,7 @@ function AxisRow({ label, min, max, onChangeMin, onChangeMax }: {
 
 function InputWithBlurCommit({ value, placeholder, onCommit, className }: {
   value: string;
-  placeholder: string;
+  placeholder?: string;
   onCommit: (raw: string) => void;
   className: string;
 }) {

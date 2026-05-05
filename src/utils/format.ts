@@ -71,22 +71,16 @@ export function computeDisplayNames(datasets: Dataset[]): {
     return { sharedPrefix: '', displayNames };
   }
 
-  if (runDatasets.length === 1) {
-    const ds = runDatasets[0];
-    displayNames.set(ds.id, getFullName(ds.origin));
-    return { sharedPrefix: '', displayNames };
-  }
-
   // Build hierarchies: [project, ...path]
   const hierarchies = runDatasets.map((d) => {
     const o = d.origin as Extract<DatasetOrigin, { kind: 'run' }>;
     return [o.project, ...o.path];
   });
 
-  // Find longest common prefix
-  let prefixLen = 0;
+  // Find longest common prefix, capped so at least one part remains as suffix
   const minLen = Math.min(...hierarchies.map((h) => h.length));
-  for (let i = 0; i < minLen; i++) {
+  let prefixLen = 0;
+  for (let i = 0; i < minLen - 1; i++) {
     const part = hierarchies[0][i];
     if (hierarchies.every((h) => h[i] === part)) {
       prefixLen++;
@@ -108,16 +102,11 @@ export function computeDisplayNames(datasets: Dataset[]): {
     }
   }
 
-  // Compute display names — suffix after prefix
+  // Compute display names — suffix after prefix (always at least one part)
   for (let i = 0; i < runDatasets.length; i++) {
     const ds = runDatasets[i];
     const suffix = hierarchies[i].slice(prefixLen);
-    if (suffix.length === 0) {
-      // All parts are shared — show full name
-      displayNames.set(ds.id, getFullName(ds.origin));
-    } else {
-      displayNames.set(ds.id, suffix.join(':'));
-    }
+    displayNames.set(ds.id, suffix.join(':'));
   }
 
   return { sharedPrefix, displayNames };
