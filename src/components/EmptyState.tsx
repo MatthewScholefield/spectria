@@ -1,8 +1,9 @@
 import { useRef, useState, useEffect, type DragEvent } from 'react';
-import { Upload, Sparkles, Check, Radio, Loader2, FolderOpen, Plus, ChevronDown, GitFork } from 'lucide-react';
+import { Upload, Sparkles, Check, Radio, Loader2, FolderOpen, Plus, ChevronDown, GitFork, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { connectRun } from '../hooks/useStreamSource';
+import { fetchProjects } from '../sources/keras/api';
 import { timeAgo } from '../utils/format';
 import type { ProjectInfo, RunInfo } from '../sources/keras/types';
 
@@ -15,14 +16,19 @@ function LocalDataEmptyState() {
   const [runsByProject, setRunsByProject] = useState<Record<string, RunInfo[]>>({});
   const [loading, setLoading] = useState(true);
   const [loadingRuns, setLoadingRuns] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const addSource = useStore((s) => s.addSource);
   const sources = useStore((s) => s.sources);
 
   useEffect(() => {
-    fetch(`${LOCAL_DATA_URL}/api/projects`)
-      .then((res) => res.json())
+    setError(null);
+    fetchProjects(LOCAL_DATA_URL)
       .then(setProjects)
-      .catch(() => setProjects([]))
+      .catch((e) => {
+        console.error('Failed to fetch local projects', e);
+        setError(e instanceof Error ? e.message : 'Failed to load training logs');
+        setProjects([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -38,7 +44,8 @@ function LocalDataEmptyState() {
         const res = await fetch(`${LOCAL_DATA_URL}/api/projects/${encodeURIComponent(projectName)}/runs`);
         const runs = await res.json();
         setRunsByProject((prev) => ({ ...prev, [projectName]: runs }));
-      } catch {
+      } catch (e) {
+        console.error(`Failed to fetch runs for ${projectName}`, e);
         setRunsByProject((prev) => ({ ...prev, [projectName]: [] }));
       }
       setLoadingRuns(null);
@@ -83,12 +90,22 @@ function LocalDataEmptyState() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        {loading ? 'Loading...' : projects.length === 0 ? 'No training logs found' : 'Select a run to visualize'}
+        {loading ? 'Loading...' : error ? 'Unable to load training logs' : projects.length === 0 ? 'No training logs found' : 'Select a run to visualize'}
       </motion.p>
 
       {loading ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+        </motion.div>
+      ) : error ? (
+        <motion.div
+          className="flex items-center gap-2 text-xs text-red-300/80 bg-red-500/10 rounded-lg px-3 py-2 max-w-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{error}</span>
         </motion.div>
       ) : projects.length === 0 ? (
         <motion.p
