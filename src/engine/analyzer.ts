@@ -55,6 +55,8 @@ export function generateCharts(
   datasetId: string,
   datasetIndex: number
 ): ChartConfig[] {
+  if (table.rowCount < 2) return [];
+
   const indexKey = detectIndexColumn(table);
   const valueCols = getValueColumns(table, indexKey);
 
@@ -90,6 +92,8 @@ export function mergeDatasetIntoCharts(
   datasetId: string,
   datasetIndex: number
 ): ChartConfig[] {
+  if (table.rowCount < 2) return existingCharts;
+
   const indexKey = detectIndexColumn(table);
   const valueCols = getValueColumns(table, indexKey);
 

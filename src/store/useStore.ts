@@ -119,7 +119,25 @@ export const useStore = create<AppState>((set, get) => ({
           },
         };
       });
-      return { datasets };
+
+      const updatedDataset = datasets.find((d) => d.id === datasetId);
+      if (!updatedDataset) return { datasets };
+
+      const datasetIndex = datasets.findIndex((d) => d.id === datasetId);
+      const hasChartsForDataset = state.charts.some((chart) =>
+        chart.series.some((series) => series.datasetId === datasetId)
+      );
+
+      if (hasChartsForDataset || updatedDataset.table.rowCount < 2) {
+        return { datasets };
+      }
+
+      const chartDatasetIndex = datasetIndex >= 0 ? datasetIndex : state.datasets.length;
+      const charts = state.charts.length === 0
+        ? generateCharts(updatedDataset.table, datasetId, chartDatasetIndex)
+        : mergeDatasetIntoCharts(state.charts, updatedDataset.table, datasetId, chartDatasetIndex);
+
+      return { datasets, charts };
     });
   },
 

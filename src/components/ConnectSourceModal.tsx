@@ -59,7 +59,6 @@ function RunRow({ serverUrl, projectName, runInfo }: {
 export function ConnectSourceModal() {
   const showConnectModal = useStore((s) => s.showConnectModal);
   const setShowConnectModal = useStore((s) => s.setShowConnectModal);
-  const sources = useStore((s) => s.sources);
 
   const [serverUrl, setServerUrl] = useState(LOCAL_DATA_MODE ? LOCAL_DATA_URL : 'http://localhost:8420');
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
@@ -105,11 +104,6 @@ export function ConnectSourceModal() {
       setLoading(false);
     }
   }, [serverUrl]);
-
-  const isConnected = (run: RunInfo) =>
-    sources.some(
-      (s) => s.serverUrl === serverUrl && s.projectName === selectedProject && s.runId === run.run_id,
-    );
 
   // Group runs by baseline, sort groups by most recent run in each group
   const groupedRuns = (() => {
