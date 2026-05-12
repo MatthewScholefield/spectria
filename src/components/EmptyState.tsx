@@ -148,7 +148,9 @@ function LocalDataEmptyState() {
                         <div className="flex justify-center py-3">
                           <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
                         </div>
-                      ) : (runsByProject[project.name] || []).map((run) => {
+                      ) : [...(runsByProject[project.name] || [])]
+                        .sort((a, b) => (b.finished_at ?? 0) - (a.finished_at ?? 0))
+                        .map((run) => {
                         const connected = sources.some(
                           (s) => s.serverUrl === LOCAL_DATA_URL && s.projectName === project.name && s.runId === run.run_id,
                         );

@@ -82,7 +82,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     set({
-      datasets: [...state.datasets, dataset],
+      datasets: [dataset, ...state.datasets],
       charts: newCharts,
     });
     return datasetId;

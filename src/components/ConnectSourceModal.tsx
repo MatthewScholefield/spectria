@@ -59,6 +59,7 @@ function RunRow({ serverUrl, projectName, runInfo }: {
 export function ConnectSourceModal() {
   const showConnectModal = useStore((s) => s.showConnectModal);
   const setShowConnectModal = useStore((s) => s.setShowConnectModal);
+  const sources = useStore((s) => s.sources);
 
   const [serverUrl, setServerUrl] = useState(LOCAL_DATA_MODE ? LOCAL_DATA_URL : 'http://localhost:8420');
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
@@ -105,7 +106,12 @@ export function ConnectSourceModal() {
     }
   }, [serverUrl]);
 
-  // Group runs by baseline
+  const isConnected = (run: RunInfo) =>
+    sources.some(
+      (s) => s.serverUrl === serverUrl && s.projectName === selectedProject && s.runId === run.run_id,
+    );
+
+  // Group runs by baseline, sort groups by most recent run in each group
   const groupedRuns = (() => {
     if (runs.length === 0) return [];
     const groups = new Map<string, RunInfo[]>();
@@ -129,10 +135,17 @@ export function ConnectSourceModal() {
       });
       groups.delete(root.run_id);
     }
-    // Orphaned runs (baseline references a run not in this list)
     for (const [baseline, orphanRuns] of groups) {
       result.push({ baseline, runs: orphanRuns });
     }
+
+    // Sort groups by the most recent run (max finished_at) in each group
+    result.sort((a, b) => {
+      const bestA = Math.max(...a.runs.map((r) => r.finished_at ?? 0));
+      const bestB = Math.max(...b.runs.map((r) => r.finished_at ?? 0));
+      return bestB - bestA;
+    });
+
     return result;
   })();
 
