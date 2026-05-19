@@ -4,10 +4,14 @@ import { rowToValues, createTableFromHeaders } from '../engine/stream-adapter';
 import type { StreamSource, DatasetOrigin, DataTable } from '../engine/types';
 import { generateId, parseRunPath } from '../utils/format';
 
+function isMeaningfulRow(row: Record<string, unknown>): boolean {
+  return Object.keys(row).some((key) => !key.startsWith('_'));
+}
+
 function createTableFromRows(rows: Record<string, unknown>[]): DataTable {
   const headers: string[] = [];
   const seen = new Set<string>();
-  const rowValues = rows.map((row) => rowToValues(row));
+  const rowValues = rows.filter(isMeaningfulRow).map((row) => rowToValues(row));
 
   for (const values of rowValues) {
     for (const key of values.keys()) {
@@ -24,7 +28,7 @@ function createTableFromRows(rows: Record<string, unknown>[]): DataTable {
     }
   }
 
-  table.rowCount = rows.length;
+  table.rowCount = rowValues.length;
   return table;
 }
 
@@ -46,7 +50,8 @@ export function useStreamSource(source: StreamSource | null) {
 
     const flushPendingRows = () => {
       if (pendingRows.length === 0) return;
-      const batch = pendingRows.splice(0, pendingRows.length);
+      const batch = pendingRows.splice(0, pendingRows.length).filter(isMeaningfulRow);
+      if (batch.length === 0) return;
 
       if (!datasetId) {
         datasetId = addDatasetFromTable(createTableFromRows(batch), origin, source.id);
@@ -81,7 +86,9 @@ export function useStreamSource(source: StreamSource | null) {
     es.addEventListener('row', (e: MessageEvent) => {
       if (cancelled) return;
       try {
-        pendingRows.push(JSON.parse(e.data));
+        const row = JSON.parse(e.data);
+        if (!isMeaningfulRow(row)) return;
+        pendingRows.push(row);
         scheduleFlush();
       } catch { /* ignore malformed */ }
     });
