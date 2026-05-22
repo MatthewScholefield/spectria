@@ -1,4 +1,4 @@
-import type { Dataset, DatasetOrigin } from '../engine/types';
+import type { ChartValueUnit, Dataset, DatasetOrigin } from '../engine/types';
 
 export function formatNumber(value: number): string {
   if (Number.isInteger(value) && Math.abs(value) < 1_000_000) {
@@ -14,6 +14,13 @@ export function formatNumber(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   });
+}
+
+export function formatChartValue(value: number, unit: ChartValueUnit): string {
+  if (unit === 'percentage') {
+    return `${formatNumber(value)}%`;
+  }
+  return formatNumber(value);
 }
 
 export function timeAgo(epoch: number | null): string {

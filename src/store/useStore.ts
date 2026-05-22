@@ -1,10 +1,75 @@
 import { create } from 'zustand';
-import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale, SeriesConfig, StreamSource, SourceStatus, DataTable, DatasetOrigin } from '../engine/types';
+import type {
+  Dataset,
+  ChartConfig,
+  ChartType,
+  AxisBound,
+  AxisScale,
+  SeriesConfig,
+  StreamSource,
+  SourceStatus,
+  DataTable,
+  DatasetOrigin,
+  RelativeMode,
+  SeriesIdentity,
+  ChartValueUnit,
+} from '../engine/types';
 import { parseRawData } from '../engine/parser';
 import { generateCharts, mergeDatasetIntoCharts, PRIMARY_PALETTE } from '../engine/analyzer';
 import { generateId, generateDatasetName } from '../utils/format';
 
 type GridColumns = 1 | 2 | 3;
+type Row = Record<string, unknown>;
+
+function getSeriesKey(series: SeriesIdentity): string {
+  return series.columnKey + '_' + series.datasetId.slice(-6);
+}
+
+function sameSeries(a: SeriesIdentity | null | undefined, b: SeriesIdentity): boolean {
+  return a?.datasetId === b.datasetId && a.columnKey === b.columnKey;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && isFinite(value);
+}
+
+function getEffectiveRelativeBase(chart: ChartConfig): SeriesConfig | null {
+  return chart.series.find((series) => sameSeries(chart.relativeBase, series))
+    ?? chart.series[0]
+    ?? null;
+}
+
+function applyRelativeTransform(chart: ChartConfig, rows: Row[]): Row[] {
+  if (chart.relativeMode === 'none') return rows;
+
+  const base = getEffectiveRelativeBase(chart);
+  if (!base) return rows;
+
+  const visibleSeries = chart.series.filter((series) => series.visible);
+  if (visibleSeries.length === 0) return rows;
+
+  const baseKey = getSeriesKey(base);
+  const transformedRows: Row[] = [];
+
+  for (const row of rows) {
+    const baseValue = row[baseKey];
+    if (!isFiniteNumber(baseValue)) continue;
+    if (chart.relativeMode === 'percentResidual' && baseValue === 0) continue;
+
+    const nextRow: Row = { [chart.xKey]: row[chart.xKey] };
+    for (const series of chart.series) {
+      const key = getSeriesKey(series);
+      const value = row[key];
+      if (!isFiniteNumber(value)) continue;
+      nextRow[key] = chart.relativeMode === 'percentResidual'
+        ? ((value - baseValue) / baseValue) * 100
+        : value - baseValue;
+    }
+    transformedRows.push(nextRow);
+  }
+
+  return transformedRows;
+}
 
 interface AppState {
   datasets: Dataset[];
@@ -29,6 +94,9 @@ interface AppState {
   updateChartTitle: (chartId: string, title: string) => void;
   updateChartType: (chartId: string, type: ChartType) => void;
   updateChartXKey: (chartId: string, xKey: string) => void;
+  updateChartRelativeMode: (chartId: string, mode: RelativeMode) => void;
+  updateChartRelativeBase: (chartId: string, base: SeriesIdentity | null) => void;
+  updateChartYUnit: (chartId: string, unit: ChartValueUnit) => void;
   toggleSeriesVisibility: (chartId: string, datasetId: string, columnKey: string) => void;
   updateSeriesColor: (chartId: string, datasetId: string, columnKey: string, color: string) => void;
   updateSeriesLabel: (chartId: string, datasetId: string, columnKey: string, label: string) => void;
@@ -147,6 +215,7 @@ export const useStore = create<AppState>((set, get) => ({
       const charts = state.charts
         .map((chart) => ({
           ...chart,
+          relativeBase: chart.relativeBase?.datasetId === id ? null : chart.relativeBase,
           series: chart.series.filter((s) => s.datasetId !== id),
         }))
         .filter((chart) => chart.series.length > 0);
@@ -183,6 +252,9 @@ export const useStore = create<AppState>((set, get) => ({
       const charts = state.charts
         .map((chart) => ({
           ...chart,
+          relativeBase: chart.relativeBase && removedDatasetIds.has(chart.relativeBase.datasetId)
+            ? null
+            : chart.relativeBase,
           series: chart.series.filter((s) => !removedDatasetIds.has(s.datasetId)),
         }))
         .filter((chart) => chart.series.length > 0);
@@ -214,6 +286,38 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       charts: state.charts.map((c) =>
         c.id === chartId ? { ...c, xKey } : c
+      ),
+    }));
+  },
+
+  updateChartRelativeMode: (chartId: string, mode: RelativeMode) => {
+    set((state) => ({
+      charts: state.charts.map((c) => {
+        if (c.id !== chartId) return c;
+        const next: ChartConfig = {
+          ...c,
+          relativeMode: mode,
+        };
+        if (mode === 'percentResidual' && next.yUnit === 'number') {
+          next.yUnit = 'percentage';
+        }
+        return next;
+      }),
+    }));
+  },
+
+  updateChartRelativeBase: (chartId: string, base: SeriesIdentity | null) => {
+    set((state) => ({
+      charts: state.charts.map((c) =>
+        c.id === chartId ? { ...c, relativeBase: base } : c
+      ),
+    }));
+  },
+
+  updateChartYUnit: (chartId: string, unit: ChartValueUnit) => {
+    set((state) => ({
+      charts: state.charts.map((c) =>
+        c.id === chartId ? { ...c, yUnit: unit } : c
       ),
     }));
   },
@@ -274,8 +378,11 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => {
       const updated = state.charts.map((c) => {
         if (c.id !== chartId) return c;
+        const removedBase =
+          c.relativeBase?.datasetId === datasetId && c.relativeBase.columnKey === columnKey;
         return {
           ...c,
+          relativeBase: removedBase ? null : c.relativeBase,
           series: c.series.filter(
             (s) => !(s.datasetId === datasetId && s.columnKey === columnKey)
           ),
@@ -299,6 +406,9 @@ export const useStore = create<AppState>((set, get) => ({
       type: config?.type ?? 'line',
       xKey: config?.xKey ?? '__rowIndex__',
       series: config?.series ?? [],
+      relativeMode: config?.relativeMode ?? 'none',
+      relativeBase: config?.relativeBase ?? null,
+      yUnit: config?.yUnit ?? 'number',
       yAxisMin: config?.yAxisMin ?? 'auto',
       yAxisMax: config?.yAxisMax ?? 'auto',
       xAxisMin: config?.xAxisMin ?? 'auto',
@@ -358,13 +468,13 @@ export const useStore = create<AppState>((set, get) => ({
             if (series.datasetId !== dataset.id) continue;
             const col = dataset.table.columns.find((c) => c.key === series.columnKey);
             if (col && i < col.values.length) {
-              row[series.columnKey + '_' + series.datasetId.slice(-6)] = col.values[i];
+              row[getSeriesKey(series)] = col.values[i];
             }
           }
         }
         rows.push(row);
       }
-      return rows;
+      return applyRelativeTransform(chart, rows);
     }
 
     // Join on X-axis value across datasets
@@ -400,12 +510,12 @@ export const useStore = create<AppState>((set, get) => ({
           if (series.datasetId !== dataset.id) continue;
           const col = dataset.table.columns.find((c) => c.key === series.columnKey);
           if (col && rowIndex < col.values.length) {
-            row[series.columnKey + '_' + series.datasetId.slice(-6)] = col.values[rowIndex];
+            row[getSeriesKey(series)] = col.values[rowIndex];
           }
         }
       }
       rows.push(row);
     }
-    return rows;
+    return applyRelativeTransform(chart, rows);
   },
 }));

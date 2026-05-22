@@ -43,12 +43,21 @@ export interface Dataset {
 
 export type ChartType = 'line' | 'area' | 'bar' | 'scatter';
 
+export type RelativeMode = 'none' | 'residual' | 'percentResidual';
+
+export type ChartValueUnit = 'number' | 'percentage';
+
 export interface SeriesConfig {
   datasetId: string;
   columnKey: string;
   customLabel?: string;
   color: string;
   visible: boolean;
+}
+
+export interface SeriesIdentity {
+  datasetId: string;
+  columnKey: string;
 }
 
 export type AxisBound = 'auto' | number;
@@ -61,6 +70,9 @@ export interface ChartConfig {
   type: ChartType;
   xKey: string;
   series: SeriesConfig[];
+  relativeMode: RelativeMode;
+  relativeBase: SeriesIdentity | null;
+  yUnit: ChartValueUnit;
   yAxisMin: AxisBound;
   yAxisMax: AxisBound;
   xAxisMin: AxisBound;

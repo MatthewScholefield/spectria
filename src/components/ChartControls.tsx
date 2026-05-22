@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import type { ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
+import type { ChartConfig, ChartType, AxisBound, AxisScale, ChartValueUnit, RelativeMode, SeriesConfig } from '../engine/types';
 import { computeDefaultLabel, getDisplayLabel } from '../engine/labels';
 import { computeDisplayNames, getFullName } from '../utils/format';
 import { Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
@@ -12,11 +12,25 @@ const CHART_TYPES: { value: ChartType; label: string }[] = [
   { value: 'scatter', label: 'Scatter' },
 ];
 
+const RELATIVE_MODES: { value: RelativeMode; label: string }[] = [
+  { value: 'none', label: 'Raw' },
+  { value: 'residual', label: 'Delta' },
+  { value: 'percentResidual', label: '% Delta' },
+];
+
+const VALUE_UNITS: { value: ChartValueUnit; label: string }[] = [
+  { value: 'number', label: 'Number' },
+  { value: 'percentage', label: '%' },
+];
+
 export function ChartControls({ chart }: { chart: ChartConfig }) {
   const datasets = useStore((s) => s.datasets);
   const updateChartTitle = useStore((s) => s.updateChartTitle);
   const updateChartType = useStore((s) => s.updateChartType);
   const updateChartXKey = useStore((s) => s.updateChartXKey);
+  const updateChartRelativeMode = useStore((s) => s.updateChartRelativeMode);
+  const updateChartRelativeBase = useStore((s) => s.updateChartRelativeBase);
+  const updateChartYUnit = useStore((s) => s.updateChartYUnit);
   const toggleSeriesVisibility = useStore((s) => s.toggleSeriesVisibility);
   const updateSeriesColor = useStore((s) => s.updateSeriesColor);
   const updateSeriesLabel = useStore((s) => s.updateSeriesLabel);
@@ -34,6 +48,18 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
 
   // Dataset IDs participating in this chart
   const chartDatasetIds = new Set(chart.series.map((s) => s.datasetId));
+  const isNumericSeries = (series: SeriesConfig) => {
+    const ds = datasets.find((d) => d.id === series.datasetId);
+    const col = ds?.table.columns.find((c) => c.key === series.columnKey);
+    return col?.type === 'numeric';
+  };
+  const relativeBaseOptions = chart.series.filter(isNumericSeries);
+  const effectiveRelativeBase = relativeBaseOptions.find(
+    (series) => chart.relativeBase?.datasetId === series.datasetId && chart.relativeBase.columnKey === series.columnKey
+  ) ?? relativeBaseOptions[0] ?? null;
+  const relativeBaseValue = effectiveRelativeBase
+    ? `${effectiveRelativeBase.datasetId}::${effectiveRelativeBase.columnKey}`
+    : '';
 
   // X-axis: collect columns from all datasets in the chart
   const allXKeys = (() => {
@@ -69,6 +95,26 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
       color,
       visible: true,
     });
+  };
+
+  const handleRelativeModeChange = (mode: RelativeMode) => {
+    updateChartRelativeMode(chart.id, mode);
+    if (mode !== 'none' && !effectiveRelativeBase && relativeBaseOptions[0]) {
+      updateChartRelativeBase(chart.id, {
+        datasetId: relativeBaseOptions[0].datasetId,
+        columnKey: relativeBaseOptions[0].columnKey,
+      });
+    }
+  };
+
+  const handleRelativeBaseChange = (value: string) => {
+    const nextBase = relativeBaseOptions.find(
+      (series) => `${series.datasetId}::${series.columnKey}` === value
+    );
+    updateChartRelativeBase(
+      chart.id,
+      nextBase ? { datasetId: nextBase.datasetId, columnKey: nextBase.columnKey } : null,
+    );
   };
 
   return (
@@ -122,6 +168,68 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
           </select>
         </div>
       )}
+
+      {/* Transform + units */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] text-white/30 uppercase tracking-wider">Transform</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-white/30 w-8">Mode</span>
+          <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
+            {RELATIVE_MODES.map((mode) => (
+              <button
+                key={mode.value}
+                onClick={() => handleRelativeModeChange(mode.value)}
+                className={`px-2 py-1 text-[10px] rounded-md transition-all cursor-pointer ${
+                  chart.relativeMode === mode.value
+                    ? 'bg-white/10 text-white/80'
+                    : 'text-white/30 hover:text-white/50'
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {chart.relativeMode !== 'none' && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-white/30 w-8">Base</span>
+            <select
+              value={relativeBaseValue}
+              onChange={(e) => handleRelativeBaseChange(e.target.value)}
+              disabled={relativeBaseOptions.length === 0}
+              className="min-w-0 flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white/70 outline-none disabled:text-white/25"
+            >
+              {relativeBaseOptions.length === 0 ? (
+                <option value="">No numeric visible series</option>
+              ) : (
+                relativeBaseOptions.map((series) => (
+                  <option key={`${series.datasetId}-${series.columnKey}`} value={`${series.datasetId}::${series.columnKey}`}>
+                    {getDisplayLabel(chart.series, series, datasets, datasetDisplayNames)}{series.visible ? '' : ' (hidden)'}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-white/30 w-8">Unit</span>
+          <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
+            {VALUE_UNITS.map((unit) => (
+              <button
+                key={unit.value}
+                onClick={() => updateChartYUnit(chart.id, unit.value)}
+                className={`px-2 py-1 text-[10px] rounded-md transition-all cursor-pointer ${
+                  chart.yUnit === unit.value
+                    ? 'bg-white/10 text-white/80'
+                    : 'text-white/30 hover:text-white/50'
+                }`}
+              >
+                {unit.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Axis range */}
       <div className="space-y-1.5">
@@ -313,22 +421,15 @@ function InputWithBlurCommit({ value, placeholder, onCommit, className }: {
   className: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [local, setLocal] = useState(value);
-  const focused = useRef(false);
-
-  if (value !== local && !focused.current) {
-    setLocal(value);
-  }
 
   return (
     <input
+      key={value}
       ref={inputRef}
       type="text"
-      value={local}
+      defaultValue={value}
       placeholder={placeholder}
-      onChange={(e) => setLocal(e.target.value)}
-      onFocus={() => { focused.current = true; }}
-      onBlur={() => { focused.current = false; onCommit(local); }}
+      onBlur={(e) => onCommit(e.currentTarget.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') inputRef.current?.blur(); }}
       className={className}
     />

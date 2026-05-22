@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   ScatterChart, Scatter,
@@ -26,15 +26,16 @@ function renderLegend(value: string, entry: { color?: string }) {
     </span>
   );
 }
-import { formatNumber } from '../utils/format';
+import { formatChartValue } from '../utils/format';
 import { downsampleData } from '../engine/downsample';
 import { getDisplayLabel } from '../engine/labels';
 import { computeDisplayNames } from '../utils/format';
 
-function CustomTooltip({ active, payload, label }: {
+function CustomTooltip({ active, payload, label, unit }: {
   active?: boolean;
   payload?: Array<{ name: string; value: number; color: string }>;
   label?: string | number;
+  unit: ChartConfigType['yUnit'];
 }) {
   if (!active || !payload?.length) return null;
   return (
@@ -50,7 +51,7 @@ function CustomTooltip({ active, payload, label }: {
           />
           <span className="text-white/60 truncate max-w-[180px]">{entry.name}</span>
           <span className="text-white/90 font-medium ml-auto pl-3">
-            {typeof entry.value === 'number' ? formatNumber(entry.value) : entry.value}
+            {typeof entry.value === 'number' ? formatChartValue(entry.value, unit) : entry.value}
           </span>
         </div>
       ))}
@@ -63,7 +64,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
   const datasets = useStore((s) => s.datasets);
   const sources = useStore((s) => s.sources);
   const getMergedData = useStore((s) => s.getMergedData);
-  const data = useMemo(() => getMergedData(chart.id), [chart.id, chart.series, chart.xKey, datasets]);
+  const data = getMergedData(chart.id);
 
   const isLive = chart.series.some((s) => {
     const ds = datasets.find((d) => d.id === s.datasetId);
@@ -87,12 +88,12 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
 
   const visibleDataKeys = visibleSeries.map((s) => seriesKeyMap.get(s)!);
 
-  const sampledData = useMemo(() => {
+  const sampledData = (() => {
     if (chart.type === 'bar' || data.length <= 2000) return data;
     return downsampleData(data, 2000, visibleDataKeys);
-  }, [data, chart.type, visibleDataKeys]);
+  })();
 
-  const xDomain = useMemo((): [number, number] | undefined => {
+  const xDomain = ((): [number, number] | undefined => {
     if (chart.xAxisMin === 'auto' && chart.xAxisMax === 'auto') return undefined;
     let constrainedMin = Infinity;
     let constrainedMax = -Infinity;
@@ -114,9 +115,9 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
       chart.xAxisMin === 'auto' ? autoMin : chart.xAxisMin,
       chart.xAxisMax === 'auto' ? autoMax : chart.xAxisMax,
     ];
-  }, [data, chart.xKey, chart.xAxisMin, chart.xAxisMax]);
+  })();
 
-  const yDomain = useMemo((): [number, number] => {
+  const yDomain = ((): [number, number] => {
     if (chart.yAxisMin !== 'auto' && chart.yAxisMax !== 'auto') {
       return [chart.yAxisMin, chart.yAxisMax];
     }
@@ -147,7 +148,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
       chart.yAxisMin === 'auto' ? autoMin : chart.yAxisMin,
       chart.yAxisMax === 'auto' ? autoMax : chart.yAxisMax,
     ];
-  }, [data, visibleDataKeys, chart.xKey, chart.xAxisMin, chart.xAxisMax, chart.yAxisMin, chart.yAxisMax]);
+  })();
 
   const renderChart = () => {
     const commonProps = {
@@ -158,7 +159,17 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
 
     const xKey = chart.xKey;
     const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(chart.xScale !== 'linear' ? { scale: chart.xScale } : {}), ...(xDomain ? { type: 'number' as const, domain: xDomain, allowDataOverflow: true } : {}) };
-    const yAxisProps = { tick: { fontSize: 11 }, tickLine: false, axisLine: false, width: 50, tickFormatter: formatNumber, domain: yDomain, allowDataOverflow: true, ...(chart.yScale !== 'linear' ? { scale: chart.yScale } : {}) };
+    const effectiveYScale = chart.relativeMode === 'none' ? chart.yScale : 'linear';
+    const yAxisProps = {
+      tick: { fontSize: 11 },
+      tickLine: false,
+      axisLine: false,
+      width: 50,
+      tickFormatter: (value: number) => formatChartValue(value, chart.yUnit),
+      domain: yDomain,
+      allowDataOverflow: true,
+      ...(effectiveYScale !== 'linear' ? { scale: effectiveYScale } : {}),
+    };
 
     switch (chart.type) {
       case 'area':
@@ -167,7 +178,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
             {visibleSeries.map((s) => (
               <Area
                 key={`${s.datasetId}-${s.columnKey}`}
@@ -193,7 +204,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
             {visibleSeries.map((s) => (
               <Bar
                 key={`${s.datasetId}-${s.columnKey}`}
@@ -214,7 +225,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis {...xAxisProps} name={xKey} />
             <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
             {visibleSeries.map((s) => (
               <Scatter
                 key={`${s.datasetId}-${s.columnKey}`}
@@ -236,7 +247,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
             {visibleSeries.map((s) => (
               <Line
                 key={`${s.datasetId}-${s.columnKey}`}
