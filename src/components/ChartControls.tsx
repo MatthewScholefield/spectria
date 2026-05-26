@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale, ChartValueUnit, RelativeMode, SeriesConfig } from '../engine/types';
 import { computeDefaultLabel, getDisplayLabel } from '../engine/labels';
@@ -13,7 +13,7 @@ const CHART_TYPES: { value: ChartType; label: string }[] = [
 ];
 
 const RELATIVE_MODES: { value: RelativeMode; label: string }[] = [
-  { value: 'none', label: 'Raw' },
+  { value: 'none', label: 'None' },
   { value: 'residual', label: 'Delta' },
   { value: 'percentResidual', label: '% Delta' },
 ];
@@ -21,6 +21,16 @@ const RELATIVE_MODES: { value: RelativeMode; label: string }[] = [
 const VALUE_UNITS: { value: ChartValueUnit; label: string }[] = [
   { value: 'number', label: 'Number' },
   { value: 'percentage', label: '%' },
+  { value: 'seconds', label: 'Duration (s)' },
+  { value: 'milliseconds', label: 'Duration (ms)' },
+  { value: 'minutes', label: 'Duration (min)' },
+  { value: 'hours', label: 'Duration (hr)' },
+  { value: 'bytes', label: 'Bytes' },
+  { value: 'kilobytes', label: 'Kilobytes' },
+  { value: 'megabytes', label: 'Megabytes' },
+  { value: 'gigabytes', label: 'Gigabytes' },
+  { value: 'dollars', label: 'Dollars' },
+  { value: 'count', label: 'Count' },
 ];
 
 export function ChartControls({ chart }: { chart: ChartConfig }) {
@@ -169,11 +179,11 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
         </div>
       )}
 
-      {/* Transform + units */}
+      {/* Data */}
       <div className="space-y-1.5">
-        <span className="text-[10px] text-white/30 uppercase tracking-wider">Transform</span>
+        <span className="text-[10px] text-white/30 uppercase tracking-wider">Data</span>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-white/30 w-8">Mode</span>
+          <span className="text-[10px] text-white/30 w-12">Transform</span>
           <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
             {RELATIVE_MODES.map((mode) => (
               <button
@@ -212,22 +222,11 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
           </div>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-white/30 w-8">Unit</span>
-          <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
-            {VALUE_UNITS.map((unit) => (
-              <button
-                key={unit.value}
-                onClick={() => updateChartYUnit(chart.id, unit.value)}
-                className={`px-2 py-1 text-[10px] rounded-md transition-all cursor-pointer ${
-                  chart.yUnit === unit.value
-                    ? 'bg-white/10 text-white/80'
-                    : 'text-white/30 hover:text-white/50'
-                }`}
-              >
-                {unit.label}
-              </button>
-            ))}
-          </div>
+          <span className="text-[10px] text-white/30 w-12">Unit</span>
+          <UnitSelector
+            value={chart.yUnit}
+            onChange={(unit) => updateChartYUnit(chart.id, unit)}
+          />
         </div>
       </div>
 
@@ -342,6 +341,71 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function getUnitLabel(value: ChartValueUnit): string {
+  if (value.startsWith('custom:')) {
+    return value.slice('custom:'.length);
+  }
+  return VALUE_UNITS.find((unit) => unit.value === value)?.label ?? value;
+}
+
+function parseUnitValue(raw: string): ChartValueUnit {
+  const trimmed = raw.trim();
+  const matchedUnit = VALUE_UNITS.find(
+    (unit) => unit.label.toLowerCase() === trimmed.toLowerCase() || unit.value === trimmed
+  );
+
+  if (matchedUnit) {
+    return matchedUnit.value;
+  }
+  if (trimmed.startsWith('custom:')) {
+    const customUnit = trimmed.slice('custom:'.length).trim();
+    return customUnit ? `custom:${customUnit}` : 'number';
+  }
+  return trimmed ? `custom:${trimmed}` : 'number';
+}
+
+function UnitSelector({ value, onChange }: {
+  value: ChartValueUnit;
+  onChange: (unit: ChartValueUnit) => void;
+}) {
+  const datalistId = useId();
+  const [draft, setDraft] = useState(getUnitLabel(value));
+
+  useEffect(() => {
+    setDraft(getUnitLabel(value));
+  }, [value]);
+
+  const commit = (raw: string) => {
+    const nextUnit = parseUnitValue(raw);
+    onChange(nextUnit);
+    setDraft(getUnitLabel(nextUnit));
+  };
+
+  return (
+    <div className="min-w-0 flex-1">
+      <input
+        key={value}
+        list={datalistId}
+        value={draft}
+        onChange={(e) => setDraft(e.currentTarget.value)}
+        onBlur={(e) => commit(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+        className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white/70 outline-none placeholder:text-white/20"
+        placeholder="Search or enter custom"
+      />
+      <datalist id={datalistId}>
+        {VALUE_UNITS.map((unit) => (
+          <option key={unit.value} value={unit.label} />
+        ))}
+      </datalist>
     </div>
   );
 }

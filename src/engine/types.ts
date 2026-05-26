@@ -45,7 +45,20 @@ export type ChartType = 'line' | 'area' | 'bar' | 'scatter';
 
 export type RelativeMode = 'none' | 'residual' | 'percentResidual';
 
-export type ChartValueUnit = 'number' | 'percentage';
+export type ChartValueUnit =
+  | 'number'
+  | 'percentage'
+  | 'seconds'
+  | 'milliseconds'
+  | 'minutes'
+  | 'hours'
+  | 'bytes'
+  | 'kilobytes'
+  | 'megabytes'
+  | 'gigabytes'
+  | 'dollars'
+  | 'count'
+  | `custom:${string}`;
 
 export interface SeriesConfig {
   datasetId: string;

@@ -17,10 +17,34 @@ export function formatNumber(value: number): string {
 }
 
 export function formatChartValue(value: number, unit: ChartValueUnit): string {
-  if (unit === 'percentage') {
-    return `${formatNumber(value)}%`;
+  const formatted = formatNumber(value);
+  const suffixes: Partial<Record<ChartValueUnit, string>> = {
+    percentage: '%',
+    seconds: 's',
+    milliseconds: 'ms',
+    minutes: 'min',
+    hours: 'hr',
+    bytes: 'B',
+    kilobytes: 'KB',
+    megabytes: 'MB',
+    gigabytes: 'GB',
+    dollars: '$',
+  };
+
+  if (unit === 'number' || unit === 'count') {
+    return formatted;
   }
-  return formatNumber(value);
+  if (unit === 'percentage') {
+    return `${formatted}%`;
+  }
+  if (unit === 'dollars') {
+    return `$${formatted}`;
+  }
+  if (unit.startsWith('custom:')) {
+    const customUnit = unit.slice('custom:'.length).trim();
+    return customUnit ? `${formatted} ${customUnit}` : formatted;
+  }
+  return `${formatted}${suffixes[unit] ? ` ${suffixes[unit]}` : ''}`;
 }
 
 export function timeAgo(epoch: number | null): string {
