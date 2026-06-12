@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
 import { CustomTooltip } from '../ChartCard';
+import { createTickFormatter } from '../../utils/format';
 
 interface ChartViewProps {
   data: Record<string, unknown>[];
@@ -48,6 +49,7 @@ export const LineChartView = React.memo(function LineChartView({
     ...(xScale !== 'linear' ? { scale: xScale } : {}),
     ...(xDomain ? { type: 'number' as const, domain: xDomain, allowDataOverflow: true } : {}),
   };
+  const tickFormatter = React.useMemo(() => createTickFormatter(yDomain), [yDomain]);
   const effectiveYScale = relativeMode === 'none' ? yScale : 'linear';
   const yAxisProps = {
     tick: { fontSize: 11 },
@@ -56,6 +58,7 @@ export const LineChartView = React.memo(function LineChartView({
     width: 50,
     domain: yDomain,
     allowDataOverflow: true,
+    tickFormatter,
     ...(effectiveYScale !== 'linear' ? { scale: effectiveYScale } : {}),
   };
 

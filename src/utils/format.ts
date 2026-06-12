@@ -47,6 +47,26 @@ export function formatChartValue(value: number, unit: ChartValueUnit): string {
   return `${formatted}${suffixes[unit] ? ` ${suffixes[unit]}` : ''}`;
 }
 
+export function createTickFormatter(
+  domain: [number, number],
+): (value: number) => string {
+  const range = Math.abs(domain[1] - domain[0]);
+  if (range === 0) return (v: number) => v.toLocaleString();
+
+  const tickStep = range / 5;
+  let precision = Math.max(0, Math.ceil(-Math.log10(tickStep)));
+  precision = Math.min(precision, 6);
+
+  return (value: number) => {
+    const rounded = parseFloat(value.toFixed(precision));
+    if (rounded === 0) return '0';
+    return rounded.toLocaleString(undefined, {
+      minimumFractionDigits: precision,
+      maximumFractionDigits: precision,
+    });
+  };
+}
+
 export function timeAgo(epoch: number | null): string {
   if (!epoch) return 'completed';
   const seconds = Math.floor(Date.now() / 1000) - epoch;
