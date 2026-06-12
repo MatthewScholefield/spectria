@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 import type {
   Dataset,
   ChartConfig,
@@ -64,7 +65,7 @@ interface AppState {
   setEditingChartId: (id: string | null) => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
+export const useStore = create<AppState>()(immer((set, get) => ({
   datasets: [],
   charts: [],
   sources: [],
@@ -80,7 +81,7 @@ export const useStore = create<AppState>((set, get) => ({
     const state = get();
     const origin: DatasetOrigin = { kind: 'manual', label: name || generateDatasetName(state.datasets.length) };
     get().addDatasetFromTable(table, origin);
-    set({ showDataModal: false });
+    set((state) => { state.showDataModal = false; });
   },
 
   addDatasetFromTable: (table: DataTable, origin: DatasetOrigin, sourceId?: string): string => {
@@ -96,253 +97,223 @@ export const useStore = create<AppState>((set, get) => ({
       newCharts = mergeDatasetIntoCharts(state.charts, table, datasetId, state.datasets.length);
     }
 
-    set({
-      datasets: [dataset, ...state.datasets],
-      charts: newCharts,
+    set((state) => {
+      state.datasets.unshift(dataset);
+      state.charts = newCharts;
     });
     return datasetId;
   },
 
   appendRowsToDataset: (datasetId: string, rows: Record<string, unknown>[]) => {
     set((state) => {
-      const datasets = state.datasets.map((d) => {
-        if (d.id !== datasetId) return d;
+      const dataset = state.datasets.find((d) => d.id === datasetId);
+      if (!dataset) return;
 
-        const colMap = new Map(d.table.columns.map((c) => [c.key, c]));
-        let newRowCount = d.table.rowCount;
-
-        for (const row of rows) {
-          for (const [key, value] of Object.entries(row)) {
-            if (key.startsWith('_')) continue;
-            let col = colMap.get(key);
-            if (!col) {
-              const inferredType = typeof value === 'number' ? 'numeric' as const : 'categorical' as const;
-              col = { key, header: key, type: inferredType, values: [] };
-              colMap.set(key, col);
-            }
-            col.values.push(value as string | number | null);
+      const colMap = new Map(dataset.table.columns.map((c) => [c.key, c]));
+      for (const row of rows) {
+        for (const [key, value] of Object.entries(row)) {
+          if (key.startsWith('_')) continue;
+          let col = colMap.get(key);
+          if (!col) {
+            col = { key, header: key, type: typeof value === 'number' ? 'numeric' as const : 'categorical' as const, values: [] };
+            colMap.set(key, col);
           }
-          newRowCount++;
+          col.values.push(value as string | number | null);
         }
+        dataset.table.rowCount++;
+      }
 
-        return {
-          ...d,
-          table: {
-            columns: Array.from(colMap.values()),
-            rowCount: newRowCount,
-            indexColumnKey: d.table.indexColumnKey,
-          },
-        };
-      });
+      dataset.table.columns = Array.from(colMap.values());
 
-      const updatedDataset = datasets.find((d) => d.id === datasetId);
-      if (!updatedDataset) return { datasets };
-
-      const datasetIndex = datasets.findIndex((d) => d.id === datasetId);
       const hasChartsForDataset = state.charts.some((chart) =>
         chart.series.some((series) => series.datasetId === datasetId)
       );
 
-      if (hasChartsForDataset || updatedDataset.table.rowCount < 2) {
-        return { datasets };
-      }
+      if (hasChartsForDataset || dataset.table.rowCount < 2) return;
 
+      const datasetIndex = state.datasets.findIndex((d) => d.id === datasetId);
       const chartDatasetIndex = datasetIndex >= 0 ? datasetIndex : state.datasets.length;
-      const charts = state.charts.length === 0
-        ? generateCharts(updatedDataset.table, datasetId, chartDatasetIndex)
-        : mergeDatasetIntoCharts(state.charts, updatedDataset.table, datasetId, chartDatasetIndex);
-
-      return { datasets, charts };
+      state.charts = state.charts.length === 0
+        ? generateCharts(dataset.table, datasetId, chartDatasetIndex)
+        : mergeDatasetIntoCharts(state.charts, dataset.table, datasetId, chartDatasetIndex);
     });
   },
 
   removeDataset: (id: string) => {
     set((state) => {
-      const datasets = state.datasets.filter((d) => d.id !== id);
-      const charts = state.charts
-        .map((chart) => ({
-          ...chart,
-          relativeBase: chart.relativeBase?.datasetId === id ? null : chart.relativeBase,
-          series: chart.series.filter((s) => s.datasetId !== id),
-        }))
-        .filter((chart) => chart.series.length > 0);
-      return { datasets, charts };
+      const datasetIndex = state.datasets.findIndex((d) => d.id === id);
+      if (datasetIndex !== -1) state.datasets.splice(datasetIndex, 1);
+
+      for (let i = state.charts.length - 1; i >= 0; i--) {
+        const chart = state.charts[i];
+        if (chart.relativeBase?.datasetId === id) {
+          chart.relativeBase = null;
+        }
+        chart.series = chart.series.filter((s) => s.datasetId !== id);
+        if (chart.series.length === 0) {
+          state.charts.splice(i, 1);
+        }
+      }
     });
   },
 
   renameDataset: (id: string, name: string) => {
-    set((state) => ({
-      datasets: state.datasets.map((d) =>
-        d.id === id ? { ...d, customName: name } : d
-      ),
-    }));
+    set((state) => {
+      const dataset = state.datasets.find((d) => d.id === id);
+      if (dataset) dataset.customName = name;
+    });
   },
 
   addSource: (source: StreamSource) => {
-    set((state) => ({ sources: [...state.sources, source] }));
+    set((state) => { state.sources.push(source); });
   },
 
   updateSourceStatus: (sourceId: string, status: SourceStatus) => {
-    set((state) => ({
-      sources: state.sources.map((s) =>
-        s.id === sourceId ? { ...s, status } : s
-      ),
-    }));
+    set((state) => {
+      const source = state.sources.find((s) => s.id === sourceId);
+      if (source) source.status = status;
+    });
   },
 
   removeSource: (sourceId: string) => {
     set((state) => {
-      const datasets = state.datasets.filter((d) => d.sourceId !== sourceId);
       const removedDatasetIds = new Set(
         state.datasets.filter((d) => d.sourceId === sourceId).map((d) => d.id)
       );
-      const charts = state.charts
-        .map((chart) => ({
-          ...chart,
-          relativeBase: chart.relativeBase && removedDatasetIds.has(chart.relativeBase.datasetId)
-            ? null
-            : chart.relativeBase,
-          series: chart.series.filter((s) => !removedDatasetIds.has(s.datasetId)),
-        }))
-        .filter((chart) => chart.series.length > 0);
-      return {
-        sources: state.sources.filter((s) => s.id !== sourceId),
-        datasets,
-        charts,
-      };
+
+      state.datasets = state.datasets.filter((d) => d.sourceId !== sourceId);
+      state.sources = state.sources.filter((s) => s.id !== sourceId);
+
+      for (let i = state.charts.length - 1; i >= 0; i--) {
+        const chart = state.charts[i];
+        if (chart.relativeBase && removedDatasetIds.has(chart.relativeBase.datasetId)) {
+          chart.relativeBase = null;
+        }
+        chart.series = chart.series.filter((s) => !removedDatasetIds.has(s.datasetId));
+        if (chart.series.length === 0) {
+          state.charts.splice(i, 1);
+        }
+      }
     });
   },
 
   updateChartTitle: (chartId: string, title: string) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, title } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart.title = title;
+    });
   },
 
   updateChartType: (chartId: string, type: ChartType) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, type } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart.type = type;
+    });
   },
 
   updateChartXKey: (chartId: string, xKey: string) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, xKey } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart.xKey = xKey;
+    });
   },
 
   updateChartRelativeMode: (chartId: string, mode: RelativeMode) => {
-    set((state) => ({
-      charts: state.charts.map((c) => {
-        if (c.id !== chartId) return c;
-        const next: ChartConfig = {
-          ...c,
-          relativeMode: mode,
-        };
-        if (mode === 'percentResidual' && next.yUnit === 'number') {
-          next.yUnit = 'percentage';
-        }
-        return next;
-      }),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (!chart) return;
+      chart.relativeMode = mode;
+      if (mode === 'percentResidual' && chart.yUnit === 'number') {
+        chart.yUnit = 'percentage';
+      }
+    });
   },
 
   updateChartRelativeBase: (chartId: string, base: SeriesIdentity | null) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, relativeBase: base } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart.relativeBase = base;
+    });
   },
 
   updateChartYUnit: (chartId: string, unit: ChartValueUnit) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, yUnit: unit } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart.yUnit = unit;
+    });
   },
 
   toggleSeriesVisibility: (chartId: string, datasetId: string, columnKey: string) => {
-    set((state) => ({
-      charts: state.charts.map((c) => {
-        if (c.id !== chartId) return c;
-        const series = c.series.map((s) =>
-          s.datasetId === datasetId && s.columnKey === columnKey
-            ? { ...s, visible: !s.visible } : s
-        );
-        return { ...c, series };
-      }),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (!chart) return;
+      const series = chart.series.find(
+        (s) => s.datasetId === datasetId && s.columnKey === columnKey
+      );
+      if (series) series.visible = !series.visible;
+    });
   },
 
   updateSeriesColor: (chartId: string, datasetId: string, columnKey: string, color: string) => {
-    set((state) => ({
-      charts: state.charts.map((c) => {
-        if (c.id !== chartId) return c;
-        const series = c.series.map((s) =>
-          s.datasetId === datasetId && s.columnKey === columnKey
-            ? { ...s, color } : s
-        );
-        return { ...c, series };
-      }),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (!chart) return;
+      const series = chart.series.find(
+        (s) => s.datasetId === datasetId && s.columnKey === columnKey
+      );
+      if (series) series.color = color;
+    });
   },
 
   updateSeriesLabel: (chartId: string, datasetId: string, columnKey: string, label: string) => {
-    set((state) => ({
-      charts: state.charts.map((c) => {
-        if (c.id !== chartId) return c;
-        const series = c.series.map((s) =>
-          s.datasetId === datasetId && s.columnKey === columnKey
-            ? { ...s, customLabel: label || undefined } : s
-        );
-        return { ...c, series };
-      }),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (!chart) return;
+      const series = chart.series.find(
+        (s) => s.datasetId === datasetId && s.columnKey === columnKey
+      );
+      if (series) series.customLabel = label || undefined;
+    });
   },
 
   addSeries: (chartId: string, series: SeriesConfig) => {
-    set((state) => ({
-      charts: state.charts.map((c) => {
-        if (c.id !== chartId) return c;
-        const exists = c.series.some(
-          (s) => s.datasetId === series.datasetId && s.columnKey === series.columnKey
-        );
-        if (exists) return c;
-        return { ...c, series: [...c.series, series] };
-      }),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (!chart) return;
+      const exists = chart.series.some(
+        (s) => s.datasetId === series.datasetId && s.columnKey === series.columnKey
+      );
+      if (!exists) chart.series.push(series);
+    });
   },
 
   removeSeries: (chartId: string, datasetId: string, columnKey: string) => {
     set((state) => {
-      const updated = state.charts.map((c) => {
-        if (c.id !== chartId) return c;
-        const removedBase =
-          c.relativeBase?.datasetId === datasetId && c.relativeBase.columnKey === columnKey;
-        return {
-          ...c,
-          relativeBase: removedBase ? null : c.relativeBase,
-          series: c.series.filter(
-            (s) => !(s.datasetId === datasetId && s.columnKey === columnKey)
-          ),
-        };
-      }).filter((c) => c.series.length > 0);
-      return { charts: updated };
+      for (let i = state.charts.length - 1; i >= 0; i--) {
+        const chart = state.charts[i];
+        if (chart.id !== chartId) continue;
+
+        if (chart.relativeBase?.datasetId === datasetId && chart.relativeBase.columnKey === columnKey) {
+          chart.relativeBase = null;
+        }
+
+        chart.series = chart.series.filter(
+          (s) => !(s.datasetId === datasetId && s.columnKey === columnKey)
+        );
+
+        if (chart.series.length === 0) {
+          state.charts.splice(i, 1);
+        }
+        break;
+      }
     });
   },
 
   deleteChart: (chartId: string) => {
-    set((state) => ({
-      charts: state.charts.filter((c) => c.id !== chartId),
-    }));
+    set((state) => {
+      const index = state.charts.findIndex((c) => c.id === chartId);
+      if (index !== -1) state.charts.splice(index, 1);
+    });
   },
 
   createChart: (config?: Partial<ChartConfig>) => {
@@ -363,7 +334,7 @@ export const useStore = create<AppState>((set, get) => ({
       yScale: config?.yScale ?? 'linear',
       xScale: config?.xScale ?? 'linear',
     };
-    set((state) => ({ charts: [...state.charts, chart] }));
+    set((state) => { state.charts.push(chart); });
     return id;
   },
 
@@ -375,24 +346,22 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateAxisBound: (chartId: string, key: 'yAxisMin' | 'yAxisMax' | 'xAxisMin' | 'xAxisMax', value: AxisBound) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, [key]: value } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart[key] = value;
+    });
   },
 
   updateAxisScale: (chartId: string, key: 'yScale' | 'xScale', value: AxisScale) => {
-    set((state) => ({
-      charts: state.charts.map((c) =>
-        c.id === chartId ? { ...c, [key]: value } : c
-      ),
-    }));
+    set((state) => {
+      const chart = state.charts.find((c) => c.id === chartId);
+      if (chart) chart[key] = value;
+    });
   },
 
-  setGridColumns: (cols: GridColumns) => set({ gridColumns: cols }),
-  setShowDataModal: (show: boolean) => set({ showDataModal: show }),
-  setShowConnectModal: (show: boolean) => set({ showConnectModal: show }),
-  setShowConfigDiff: (show: boolean) => set({ showConfigDiff: show }),
-  setEditingChartId: (id: string | null) => set({ editingChartId: id }),
-}));
+  setGridColumns: (cols: GridColumns) => set((state) => { state.gridColumns = cols; }),
+  setShowDataModal: (show: boolean) => set((state) => { state.showDataModal = show; }),
+  setShowConnectModal: (show: boolean) => set((state) => { state.showConnectModal = show; }),
+  setShowConfigDiff: (show: boolean) => set((state) => { state.showConfigDiff = show; }),
+  setEditingChartId: (id: string | null) => set((state) => { state.editingChartId = id; }),
+})));

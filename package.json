@@ -12,6 +12,7 @@
   "dependencies": {
     "colord": "^2.9.3",
     "framer-motion": "^12.38.0",
+    "immer": "^11.1.8",
     "lucide-react": "^1.8.0",
     "papaparse": "^5.5.3",
     "react": "^19.2.4",
