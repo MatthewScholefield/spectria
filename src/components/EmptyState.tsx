@@ -1,63 +1,20 @@
 import { useRef, useState, useEffect, type DragEvent } from 'react';
-import { Upload, Sparkles, Check, Radio, Loader2, FolderOpen, Plus, ChevronDown, GitFork, AlertCircle } from 'lucide-react';
+import { Upload, Sparkles, Check, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { connectRun } from '../hooks/useStreamSource';
-import { fetchProjects } from '../sources/keras/api';
-import { timeAgo } from '../utils/format';
-import type { ProjectInfo, RunInfo } from '../sources/keras/types';
+import { RunBrowser, connectRun } from './RunBrowser';
+import type { SelectedRun } from './RunBrowser';
 
 const LOCAL_DATA_MODE = !!(import.meta.env.VITE_LOCAL_DATA_MODE || import.meta.env.VITE_LOCAL_DATA_URL);
 const LOCAL_DATA_URL: string = import.meta.env.VITE_LOCAL_DATA_URL ?? '';
 
 function LocalDataEmptyState() {
-  const [projects, setProjects] = useState<ProjectInfo[]>([]);
-  const [expandedProject, setExpandedProject] = useState<string | null>(null);
-  const [runsByProject, setRunsByProject] = useState<Record<string, RunInfo[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [loadingRuns, setLoadingRuns] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const addSource = useStore((s) => s.addSource);
-  const sources = useStore((s) => s.sources);
 
-  useEffect(() => {
-    setError(null);
-    fetchProjects(LOCAL_DATA_URL)
-      .then(setProjects)
-      .catch((e) => {
-        console.error('Failed to fetch local projects', e);
-        setError(e instanceof Error ? e.message : 'Failed to load training logs');
-        setProjects([]);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleExpandProject = async (projectName: string) => {
-    if (expandedProject === projectName) {
-      setExpandedProject(null);
-      return;
+  const handleConfirm = (runs: SelectedRun[]) => {
+    for (const { serverUrl, projectName, runInfo } of runs) {
+      addSource(connectRun(serverUrl, projectName, runInfo.run_id, runInfo.baseline, runInfo.config));
     }
-    setExpandedProject(projectName);
-    if (!runsByProject[projectName]) {
-      setLoadingRuns(projectName);
-      try {
-        const res = await fetch(`${LOCAL_DATA_URL}/api/projects/${encodeURIComponent(projectName)}/runs`);
-        const runs = await res.json();
-        setRunsByProject((prev) => ({ ...prev, [projectName]: runs }));
-      } catch (e) {
-        console.error(`Failed to fetch runs for ${projectName}`, e);
-        setRunsByProject((prev) => ({ ...prev, [projectName]: [] }));
-      }
-      setLoadingRuns(null);
-    }
-  };
-
-  const handleRunClick = (projectName: string, run: RunInfo) => {
-    const alreadyConnected = sources.some(
-      (s) => s.serverUrl === LOCAL_DATA_URL && s.projectName === projectName && s.runId === run.run_id,
-    );
-    if (alreadyConnected) return;
-    addSource(connectRun(LOCAL_DATA_URL, projectName, run.run_id, run.baseline, run.config));
   };
 
   return (
@@ -85,103 +42,33 @@ function LocalDataEmptyState() {
       </motion.h1>
 
       <motion.p
-        className="text-base text-white/40 mb-8 text-center max-w-md shrink-0"
+        className="text-base text-white/40 mb-6 text-center max-w-md shrink-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        {loading ? 'Loading...' : error ? 'Unable to load training logs' : projects.length === 0 ? 'No training logs found' : 'Select a run to visualize'}
+        Select runs to visualize
       </motion.p>
 
-      {loading ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
-        </motion.div>
-      ) : error ? (
-        <motion.div
-          className="flex items-center gap-2 text-xs text-red-300/80 bg-red-500/10 rounded-lg px-3 py-2 max-w-md"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span>{error}</span>
-        </motion.div>
-      ) : projects.length === 0 ? (
-        <motion.p
-          className="text-xs text-white/20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          Place your logs in the logdir and restart the server
-        </motion.p>
-      ) : (
-        <motion.div
-          className="w-full max-w-md space-y-2 overflow-y-auto flex-1 min-h-0 pb-4"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {projects.map((project) => (
-            <div key={project.name} className="rounded-xl bg-white/5 border border-white/8 overflow-hidden">
-              <button
-                onClick={() => handleExpandProject(project.name)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                <FolderOpen className="w-4 h-4 text-indigo-300/60 shrink-0" />
-                <span className="flex-1 text-sm text-white/70">{project.name}</span>
-                <span className="text-xs text-white/25">{project.run_count} runs</span>
-                <ChevronDown className={`w-4 h-4 text-white/20 transition-transform ${expandedProject === project.name ? 'rotate-180' : ''}`} />
-              </button>
-              <AnimatePresence>
-                {expandedProject === project.name && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-3 pb-3 space-y-1">
-                      {loadingRuns === project.name ? (
-                        <div className="flex justify-center py-3">
-                          <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
-                        </div>
-                      ) : [...(runsByProject[project.name] || [])]
-                        .sort((a, b) => (b.finished_at ?? 0) - (a.finished_at ?? 0))
-                        .map((run) => {
-                        const connected = sources.some(
-                          (s) => s.serverUrl === LOCAL_DATA_URL && s.projectName === project.name && s.runId === run.run_id,
-                        );
-                        return (
-                          <div key={run.run_id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${run.status === 'running' ? 'bg-green-400' : connected ? 'bg-blue-400' : 'bg-white/20'}`} />
-                            <span className="flex-1 text-xs text-white/60 truncate">{run.run_id}</span>
-                            {run.baseline && <span className="text-[10px] text-white/25 flex items-center gap-0.5"><GitFork className="w-2.5 h-2.5" />{run.baseline}</span>}
-                            <span className="text-[10px] text-white/25 uppercase">
-                              {run.status === 'running' ? 'running' : timeAgo(run.finished_at)}
-                            </span>
-                            <button
-                              onClick={() => handleRunClick(project.name, run)}
-                              className={`p-1 rounded transition-colors cursor-pointer ${
-                                connected ? 'text-blue-400/50' : 'text-white/30 hover:text-white/60 hover:bg-white/10'
-                              }`}
-                              disabled={connected}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
-        </motion.div>
-      )}
+      <motion.div
+        className="w-full max-w-md flex-1 min-h-0 overflow-hidden"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="glass-card h-full flex flex-col overflow-hidden">
+          <RunBrowser
+            serverUrl={LOCAL_DATA_URL}
+            multiSelect
+            onConfirm={handleConfirm}
+            title="Browse Runs"
+            subtitle="Select runs to visualize"
+            hideServerInput
+            autoFetch
+            className="flex-1 min-h-0"
+          />
+        </div>
+      </motion.div>
     </div>
   );
 }
