@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale, ChartValueUnit, RelativeMode, SeriesConfig } from '../engine/types';
 import { computeDefaultLabel, getDisplayLabel } from '../engine/labels';
@@ -37,7 +38,7 @@ const VALUE_UNITS: { value: ChartValueUnit; label: string }[] = [
 export function ChartControls({ chart }: { chart: ChartConfig }) {
   const chartDatasetIds = useMemo(() => new Set(chart.series.map((s) => s.datasetId)), [chart.series]);
   const datasets = useStore(
-    useCallback((s) => s.datasets.filter((d) => chartDatasetIds.has(d.id)), [chartDatasetIds]),
+    useShallow(useCallback((s) => s.datasets.filter((d) => chartDatasetIds.has(d.id)), [chartDatasetIds])),
   );
   const allDatasets = useStore((s) => s.datasets);
   const updateChartTitle = useStore((s) => s.updateChartTitle);

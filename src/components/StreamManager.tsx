@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '../store/useStore';
 import { useStreamSource } from '../hooks/useStreamSource';
 
@@ -9,7 +10,7 @@ const SourceConnection = React.memo(function SourceConnection({ sourceId }: { so
 });
 
 export function StreamManager() {
-  const sourceIds = useStore((s) => s.sources.map((src) => src.id));
+  const sourceIds = useStore(useShallow((s) => s.sources.map((src) => src.id)));
   return (
     <>
       {sourceIds.map((id) => (

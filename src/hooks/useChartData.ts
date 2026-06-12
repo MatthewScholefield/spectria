@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '../store/useStore';
 import { getCachedMergedData } from '../store/mergedDataCache';
 import { downsampleData } from '../engine/downsample';
@@ -31,7 +32,7 @@ export function useChartData(chart: ChartConfig): ChartDataResult {
   );
 
   const datasets = useStore(
-    useCallback((s) => s.datasets.filter((d) => relevantDatasetIds.has(d.id)), [relevantDatasetIds]),
+    useShallow(useCallback((s) => s.datasets.filter((d) => relevantDatasetIds.has(d.id)), [relevantDatasetIds])),
   );
 
   const relevantSourceIds = useMemo(() => {
@@ -43,7 +44,7 @@ export function useChartData(chart: ChartConfig): ChartDataResult {
   }, [datasets]);
 
   const sources = useStore(
-    useCallback((s) => s.sources.filter((src) => relevantSourceIds.has(src.id)), [relevantSourceIds]),
+    useShallow(useCallback((s) => s.sources.filter((src) => relevantSourceIds.has(src.id)), [relevantSourceIds])),
   );
 
   const data = useMemo(
