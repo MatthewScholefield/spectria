@@ -234,15 +234,7 @@ This creates a new array reference, which causes Zustand to notify all subscribe
 
 ## Step 5: Optimize `appendRowsToDataset` for Live Streaming
 
-**Status:** [ ] Not started
-
-### Problem
-`appendRowsToDataset` is called on every `requestAnimationFrame` during live streaming. It:
-- Maps over ALL datasets to find the one to update (linear scan)
-- Rebuilds column maps from scratch
-- Calls `mergeDatasetIntoCharts` or `generateCharts` which do full chart regeneration
-- Creates new dataset objects for ALL datasets (not just the changed one)
-- Creates new chart configs even when the data addition doesn't affect chart structure
+**Status:** [x] Done
 
 ### Implementation
 

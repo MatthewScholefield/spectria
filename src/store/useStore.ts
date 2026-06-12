@@ -109,21 +109,30 @@ export const useStore = create<AppState>()(immer((set, get) => ({
       const dataset = state.datasets.find((d) => d.id === datasetId);
       if (!dataset) return;
 
-      const colMap = new Map(dataset.table.columns.map((c) => [c.key, c]));
+      const colIndexMap = new Map<string, number>();
+      for (let i = 0; i < dataset.table.columns.length; i++) {
+        colIndexMap.set(dataset.table.columns[i].key, i);
+      }
+
       for (const row of rows) {
         for (const [key, value] of Object.entries(row)) {
           if (key.startsWith('_')) continue;
-          let col = colMap.get(key);
-          if (!col) {
-            col = { key, header: key, type: typeof value === 'number' ? 'numeric' as const : 'categorical' as const, values: [] };
-            colMap.set(key, col);
+          const colIdx = colIndexMap.get(key);
+          if (colIdx !== undefined) {
+            dataset.table.columns[colIdx].values.push(value as string | number | null);
+          } else {
+            const newIdx = dataset.table.columns.length;
+            dataset.table.columns.push({
+              key,
+              header: key,
+              type: typeof value === 'number' ? 'numeric' as const : 'categorical' as const,
+              values: [value as string | number | null],
+            });
+            colIndexMap.set(key, newIdx);
           }
-          col.values.push(value as string | number | null);
         }
         dataset.table.rowCount++;
       }
-
-      dataset.table.columns = Array.from(colMap.values());
 
       const hasChartsForDataset = state.charts.some((chart) =>
         chart.series.some((series) => series.datasetId === datasetId)
