@@ -11,20 +11,26 @@ import { AreaChartView } from './charts/AreaChartView';
 import { BarChartView } from './charts/BarChartView';
 import { ScatterChartView } from './charts/ScatterChartView';
 
-export function renderLegend(value: string, entry: { color?: string }) {
+export function ScrollableLegend(props: any) {
+  const { payload } = props;
+  if (!payload?.length) return null;
   return (
-    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginRight: 12 }}>
-      <span style={{
-        display: 'inline-block',
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: entry.color,
-        marginRight: 6,
-        verticalAlign: 'middle',
-      }} />
-      {value}
-    </span>
+    <div style={{ maxHeight: 80, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 8px', padding: '4px 0' }}>
+      {payload.map((entry: any, i: number) => (
+        <span key={i} style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, whiteSpace: 'nowrap' }}>
+          <span style={{
+            display: 'inline-block',
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            backgroundColor: entry.color,
+            marginRight: 6,
+            verticalAlign: 'middle',
+          }} />
+          {entry.value}
+        </span>
+      ))}
+    </div>
   );
 }
 

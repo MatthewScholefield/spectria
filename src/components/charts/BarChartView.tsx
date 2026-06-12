@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
-import { renderLegend } from '../ChartCard';
+import { ScrollableLegend as LegendContent } from '../ChartCard';
 import { CustomTooltip } from '../ChartCard';
 
 interface ChartViewProps {
@@ -74,7 +74,7 @@ export const BarChartView = React.memo(function BarChartView({
           {...animProps}
         />
       ))}
-      <Legend formatter={renderLegend} />
+      <Legend content={<LegendContent />} />
     </BarChart>
   );
 });
