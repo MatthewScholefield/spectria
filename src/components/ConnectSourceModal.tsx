@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { Info, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
@@ -23,15 +23,10 @@ function SupportedSourcesInfo() {
         </span>
         <ChevronDown className={`w-3 h-3 text-white/20 transition-transform ${showInfo ? 'rotate-180' : ''}`} />
       </button>
-      <AnimatePresence>
-        {showInfo && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
+      {showInfo && (
+        <div
+          className="overflow-hidden animate-fade-in"
+        >
             <div className="mt-3 pt-3 border-t border-white/5 space-y-2 text-[11px] text-white/35 leading-relaxed">
               <p>
                 Your server must implement these endpoints:
@@ -55,9 +50,8 @@ function SupportedSourcesInfo() {
                 View full documentation on GitHub
               </a>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
@@ -75,20 +69,14 @@ export function ConnectSourceModal() {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {showConnectModal && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
           onClick={() => setShowConnectModal(false)}
         >
-          <motion.div
-            className="glass-card w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+          <div
+            className="glass-card w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
             <RunBrowser
@@ -102,9 +90,9 @@ export function ConnectSourceModal() {
               autoFetch={LOCAL_DATA_MODE}
               infoContent={!LOCAL_DATA_MODE ? <SupportedSourcesInfo /> : undefined}
             />
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

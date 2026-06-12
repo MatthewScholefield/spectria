@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer } from 'recharts';
-import { motion } from 'framer-motion';
+
 import { Settings, ChevronUp } from 'lucide-react';
 import { ChartControls } from './ChartControls';
 import { useChartData } from '../hooks/useChartData';
@@ -92,11 +92,9 @@ export const ChartCard = React.memo(function ChartCard({ chart, index }: { chart
   const chartData = useChartData(chart);
 
   return (
-    <motion.div
-      className="glass-card overflow-hidden flex flex-col"
-      initial={{ opacity: 0, y: 20, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
+    <div
+      className="glass-card overflow-hidden flex flex-col opacity-0 animate-fade-in"
+      style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
@@ -111,14 +109,11 @@ export const ChartCard = React.memo(function ChartCard({ chart, index }: { chart
 
       {/* Controls */}
       {showControls && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          className="overflow-hidden"
+        <div
+          className="overflow-hidden animate-fade-in"
         >
           <ChartControls chart={chart} />
-        </motion.div>
+        </div>
       )}
 
       {/* Chart */}
@@ -133,6 +128,6 @@ export const ChartCard = React.memo(function ChartCard({ chart, index }: { chart
           </ResponsiveContainer>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }, (prev, next) => prev.chart === next.chart && prev.index === next.index);

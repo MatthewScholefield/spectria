@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { X } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -58,14 +58,10 @@ export function ConfigDiffPanel() {
   }
 
   return (
-    <AnimatePresence>
+    <>
       {showConfigDiff && (
-        <motion.div
-          className="fixed right-0 top-0 bottom-0 w-96 z-40 glass-card border-l border-white/10 overflow-y-auto"
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        <div
+          className="fixed right-0 top-0 bottom-0 w-96 z-40 glass-card border-l border-white/10 overflow-y-auto animate-slide-right"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 sticky top-0 bg-[#0a0a1a]/90 backdrop-blur-xl z-10">
@@ -113,8 +109,8 @@ export function ConfigDiffPanel() {
               </tbody>
             </table>
           </div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

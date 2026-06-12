@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { X, Upload, Check } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -50,13 +50,10 @@ export function DataInputModal() {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {show && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
         >
           {/* Backdrop */}
           <div
@@ -65,12 +62,8 @@ export function DataInputModal() {
           />
 
           {/* Modal */}
-          <motion.div
-            className="relative glass-card w-full max-w-md mx-4 p-6 space-y-5"
-            initial={{ scale: 0.95, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          <div
+            className="relative glass-card w-full max-w-md mx-4 p-6 space-y-5 animate-scale-in"
           >
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -125,16 +118,11 @@ export function DataInputModal() {
               />
 
               {/* Paste popover */}
-              <AnimatePresence>
-                {showPastePopover && (
-                  <motion.div
-                    className="absolute bottom-full left-0 right-0 mb-3 glass-card p-3 z-30"
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+              {showPastePopover && (
+                <div
+                  className="absolute bottom-full left-0 right-0 mb-3 glass-card p-3 z-30 animate-scale-in"
+                  onClick={(e) => e.stopPropagation()}
+                >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs text-white/40 uppercase tracking-wider">Paste your data</span>
                       <button
@@ -156,15 +144,14 @@ export function DataInputModal() {
                       placeholder="Tap here to paste..."
                       className="w-full h-32 text-xs bg-white/5 border border-white/10 rounded-lg p-2 text-white/70 placeholder:text-white/25 resize-none focus:outline-none focus:border-indigo-500/40 transition-colors"
                     />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                </div>
+              )}
             </div>
 
             <p className="text-xs text-white/20 text-center">Supports CSV, TSV, JSON</p>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

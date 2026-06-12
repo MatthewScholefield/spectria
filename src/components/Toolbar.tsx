@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio, GitCompare } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 import { useStore } from '../store/useStore';
 import { getFullName } from '../utils/format';
 import { useDisplayNames } from '../hooks/useDisplayNames';
@@ -38,10 +38,8 @@ export function Toolbar() {
   );
 
   return (
-    <motion.div
-      className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 border-b border-white/5 bg-black/20 backdrop-blur-md"
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
+      className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 border-b border-white/5 bg-black/20 backdrop-blur-md animate-fade-in"
     >
       {/* Row 1: Logo + scrollable dataset chips */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -186,6 +184,6 @@ export function Toolbar() {
           {LOCAL_DATA_MODE ? 'Add Run' : 'Add Data'}
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }

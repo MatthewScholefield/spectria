@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { motion } from 'framer-motion';
+
 import {
   FolderOpen, Plus, Loader2, AlertCircle, Check, GitFork,
   ArrowRight, X,
@@ -400,11 +400,8 @@ export function RunBrowser({
 
       {/* Confirm bar (multi-select mode) */}
       {multiSelect && selectedCount > 0 && (
-        <motion.div
-          className="flex items-center justify-between px-5 py-3 border-t border-white/5 bg-white/[0.02]"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
+        <div
+          className="flex items-center justify-between px-5 py-3 border-t border-white/5 bg-white/[0.02] animate-fade-in"
         >
           <span className="text-xs text-white/50">
             {selectedCount} run{selectedCount !== 1 ? 's' : ''} selected
@@ -416,7 +413,7 @@ export function RunBrowser({
             Continue
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
-        </motion.div>
+        </div>
       )}
     </div>
   );

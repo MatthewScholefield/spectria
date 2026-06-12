@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, type DragEvent } from 'react';
 import { Upload, Sparkles, Check, Radio } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { useStore } from '../store/useStore';
 import { RunBrowser, connectRun } from './RunBrowser';
 import type { SelectedRun } from './RunBrowser';
@@ -22,39 +22,30 @@ function LocalDataEmptyState() {
       <div className="relative mb-8">
         <div className="absolute inset-0 w-24 h-24 rounded-full bg-indigo-500/10 pulse-ring" />
         <div className="absolute inset-2 w-20 h-20 rounded-full bg-indigo-500/5 pulse-ring" style={{ animationDelay: '0.5s' }} />
-        <motion.div
-          className="relative w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center backdrop-blur-xl"
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        <div
+          className="relative w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center backdrop-blur-xl animate-scale-in"
         >
           <Sparkles className="w-10 h-10 text-indigo-300/80" />
-        </motion.div>
+        </div>
       </div>
 
-      <motion.h1
-        className="text-4xl font-light text-white/90 tracking-tight mb-3"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+      <h1
+        className="text-4xl font-light text-white/90 tracking-tight mb-3 opacity-0 animate-fade-in"
+        style={{ animationDelay: '100ms' }}
       >
         Spectria
-      </motion.h1>
+      </h1>
 
-      <motion.p
-        className="text-base text-white/40 mb-6 text-center max-w-md shrink-0"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+      <p
+        className="text-base text-white/40 mb-6 text-center max-w-md shrink-0 opacity-0 animate-fade-in"
+        style={{ animationDelay: '200ms' }}
       >
         Select runs to visualize
-      </motion.p>
+      </p>
 
-      <motion.div
-        className="w-full max-w-md flex-1 min-h-0 overflow-hidden"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+      <div
+        className="w-full max-w-md flex-1 min-h-0 overflow-hidden opacity-0 animate-fade-in"
+        style={{ animationDelay: '300ms' }}
       >
         <div className="glass-card h-full flex flex-col overflow-hidden">
           <RunBrowser
@@ -68,7 +59,7 @@ function LocalDataEmptyState() {
             className="flex-1 min-h-0"
           />
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -128,40 +119,33 @@ function DefaultEmptyState() {
       <div className="relative mb-8">
         <div className="absolute inset-0 w-24 h-24 rounded-full bg-indigo-500/10 pulse-ring" />
         <div className="absolute inset-2 w-20 h-20 rounded-full bg-indigo-500/5 pulse-ring" style={{ animationDelay: '0.5s' }} />
-        <motion.div
-          className="relative w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center backdrop-blur-xl"
-          animate={{ scale: isDragging ? 1.1 : 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        <div
+          className="relative w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center backdrop-blur-xl animate-scale-in"
+          style={{ transform: isDragging ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.3s ease' }}
         >
           <Sparkles className="w-10 h-10 text-indigo-300/80" />
-        </motion.div>
+        </div>
       </div>
 
       {/* Title */}
-      <motion.h1
-        className="text-4xl font-light text-white/90 tracking-tight mb-3"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+      <h1
+        className="text-4xl font-light text-white/90 tracking-tight mb-3 opacity-0 animate-fade-in"
+        style={{ animationDelay: '100ms' }}
       >
         Spectria
-      </motion.h1>
+      </h1>
 
-      <motion.p
-        className="text-base text-white/40 mb-10 text-center max-w-md"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+      <p
+        className="text-base text-white/40 mb-10 text-center max-w-md opacity-0 animate-fade-in"
+        style={{ animationDelay: '200ms' }}
       >
         Paste your data or drop a file. We'll handle the rest.
-      </motion.p>
+      </p>
 
       {/* Action area */}
-      <motion.div
-        className="flex gap-2 items-center relative"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+      <div
+        className="flex gap-2 items-center relative opacity-0 animate-fade-in"
+        style={{ animationDelay: '300ms' }}
       >
         <span
           role="button"
@@ -202,16 +186,11 @@ function DefaultEmptyState() {
         />
 
         {/* Paste popover */}
-        <AnimatePresence>
-          {showPastePopover && (
-            <motion.div
-              className="absolute bottom-full left-0 mb-3 w-80 glass-card p-3 z-30 bg-[rgba(15,15,35,0.85)]"
-              initial={{ opacity: 0, y: 8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              onClick={(e) => e.stopPropagation()}
-            >
+        {showPastePopover && (
+          <div
+            className="absolute bottom-full left-0 mb-3 w-80 glass-card p-3 z-30 bg-[rgba(15,15,35,0.85)] animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-white/40 uppercase tracking-wider">Paste your data</span>
                 <button
@@ -233,37 +212,29 @@ function DefaultEmptyState() {
                 placeholder="Tap here to paste..."
                 className="w-full h-32 text-xs bg-white/5 border border-white/10 rounded-lg p-2 text-white/90 placeholder:text-white/35 resize-none focus:outline-none focus:border-indigo-500/40 transition-colors"
               />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+          </div>
+        )}
+      </div>
 
       {/* Supported formats hint */}
-      <motion.p
-        className="text-xs text-white/20 mt-8"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
+      <p
+        className="text-xs text-white/20 mt-8 opacity-0 animate-fade-in"
+        style={{ animationDelay: '500ms' }}
       >
         Supports CSV, TSV, JSON
-      </motion.p>
+      </p>
 
       {/* Drag overlay */}
-      <AnimatePresence>
-        {isDragging && (
-          <motion.div
-            className="absolute inset-0 bg-indigo-500/10 backdrop-blur-sm flex items-center justify-center z-20 border-2 border-dashed border-indigo-400/40 rounded-2xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="text-center">
-              <Upload className="w-12 h-12 text-indigo-300 mx-auto mb-3" />
-              <p className="text-lg text-indigo-200 font-medium">Drop your file here</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isDragging && (
+        <div
+          className="absolute inset-0 bg-indigo-500/10 backdrop-blur-sm flex items-center justify-center z-20 border-2 border-dashed border-indigo-400/40 rounded-2xl animate-fade-in"
+        >
+          <div className="text-center">
+            <Upload className="w-12 h-12 text-indigo-300 mx-auto mb-3" />
+            <p className="text-lg text-indigo-200 font-medium">Drop your file here</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
