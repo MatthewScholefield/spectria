@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar,
-  ScatterChart, Scatter,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
+import React, { useState } from 'react';
+import { ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { Settings, ChevronUp } from 'lucide-react';
 import { ChartControls } from './ChartControls';
 import { useChartData } from '../hooks/useChartData';
 import type { ChartConfig as ChartConfigType } from '../engine/types';
 import { formatChartValue } from '../utils/format';
+import { LineChartView } from './charts/LineChartView';
+import { AreaChartView } from './charts/AreaChartView';
+import { BarChartView } from './charts/BarChartView';
+import { ScatterChartView } from './charts/ScatterChartView';
 
-function renderLegend(value: string, entry: { color?: string }) {
+export function renderLegend(value: string, entry: { color?: string }) {
   return (
     <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginRight: 12 }}>
       <span style={{
@@ -28,7 +28,7 @@ function renderLegend(value: string, entry: { color?: string }) {
   );
 }
 
-function CustomTooltip({ active, payload, label, unit }: {
+export function CustomTooltip({ active, payload, label, unit }: {
   active?: boolean;
   payload?: Array<{ name: string; value: number; color: string }>;
   label?: string | number;
@@ -56,134 +56,40 @@ function CustomTooltip({ active, payload, label, unit }: {
   );
 }
 
-export function ChartCard({ chart, index }: { chart: ChartConfigType; index: number }) {
+const chartViewProps = (chart: ChartConfigType, data: ReturnType<typeof useChartData>) => ({
+  data: data.sampledData,
+  xKey: chart.xKey,
+  series: data.visibleSeries,
+  seriesKeyMap: data.seriesKeyMap,
+  displayLabels: data.displayLabels,
+  xDomain: data.xDomain,
+  yDomain: data.yDomain,
+  yUnit: chart.yUnit,
+  xScale: chart.xScale,
+  yScale: chart.yScale,
+  relativeMode: chart.relativeMode,
+  isLive: data.isLive,
+  xAxisMin: chart.xAxisMin,
+  xAxisMax: chart.xAxisMax,
+});
+
+function renderChart(chart: ChartConfigType, data: ReturnType<typeof useChartData>) {
+  const props = chartViewProps(chart, data);
+  switch (chart.type) {
+    case 'area':
+      return <AreaChartView {...props} />;
+    case 'bar':
+      return <BarChartView {...props} />;
+    case 'scatter':
+      return <ScatterChartView {...props} />;
+    default:
+      return <LineChartView {...props} />;
+  }
+}
+
+export const ChartCard = React.memo(function ChartCard({ chart, index }: { chart: ChartConfigType; index: number }) {
   const [showControls, setShowControls] = useState(false);
-  const {
-    sampledData,
-    isLive,
-    visibleSeries,
-    seriesKeyMap,
-    displayLabels,
-    xDomain,
-    yDomain,
-  } = useChartData(chart);
-
-  const renderChart = () => {
-    const commonProps = {
-      data: sampledData,
-      margin: { top: 8, right: 8, left: 0, bottom: 0 },
-    };
-    const animProps = isLive ? { isAnimationActive: false } : {};
-
-    const xKey = chart.xKey;
-    const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(chart.xScale !== 'linear' ? { scale: chart.xScale } : {}), ...(xDomain ? { type: 'number' as const, domain: xDomain, allowDataOverflow: true } : {}) };
-    const effectiveYScale = chart.relativeMode === 'none' ? chart.yScale : 'linear';
-    const yAxisProps = {
-      tick: { fontSize: 11 },
-      tickLine: false,
-      axisLine: false,
-      width: 50,
-      tickFormatter: (value: number) => formatChartValue(value, chart.yUnit),
-      domain: yDomain,
-      allowDataOverflow: true,
-      ...(effectiveYScale !== 'linear' ? { scale: effectiveYScale } : {}),
-    };
-
-    switch (chart.type) {
-      case 'area':
-        return (
-          <AreaChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis {...xAxisProps} />
-            <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
-            {visibleSeries.map((s) => (
-              <Area
-                key={`${s.datasetId}-${s.columnKey}`}
-                type="monotone"
-                dataKey={seriesKeyMap.get(s)!}
-                name={displayLabels.get(s)!}
-                stroke={s.color}
-                fill={s.color}
-                fillOpacity={0.1}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-                {...animProps}
-              />
-            ))}
-            <Legend formatter={renderLegend} />
-          </AreaChart>
-        );
-
-      case 'bar':
-        return (
-          <BarChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis {...xAxisProps} />
-            <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
-            {visibleSeries.map((s) => (
-              <Bar
-                key={`${s.datasetId}-${s.columnKey}`}
-                dataKey={seriesKeyMap.get(s)!}
-                name={displayLabels.get(s)!}
-                fill={s.color}
-                radius={[4, 4, 0, 0]}
-                {...animProps}
-              />
-            ))}
-            <Legend formatter={renderLegend} />
-          </BarChart>
-        );
-
-      case 'scatter':
-        return (
-          <ScatterChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis {...xAxisProps} name={xKey} />
-            <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
-            {visibleSeries.map((s) => (
-              <Scatter
-                key={`${s.datasetId}-${s.columnKey}`}
-                name={displayLabels.get(s)!}
-                data={sampledData.map((row) => ({
-                  [xKey]: row[xKey],
-                  [seriesKeyMap.get(s)!]: row[seriesKeyMap.get(s)!],
-                }))}
-                fill={s.color}
-              />
-            ))}
-            <Legend formatter={renderLegend} />
-          </ScatterChart>
-        );
-
-      default: // line
-        return (
-          <LineChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis {...xAxisProps} />
-            <YAxis {...yAxisProps} />
-            <Tooltip content={<CustomTooltip unit={chart.yUnit} />} />
-            {visibleSeries.map((s) => (
-              <Line
-                key={`${s.datasetId}-${s.columnKey}`}
-                type="monotone"
-                dataKey={seriesKeyMap.get(s)!}
-                name={displayLabels.get(s)!}
-                stroke={s.color}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-                {...animProps}
-              />
-            ))}
-            <Legend formatter={renderLegend} />
-          </LineChart>
-        );
-    }
-  };
+  const chartData = useChartData(chart);
 
   return (
     <motion.div
@@ -217,16 +123,16 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
 
       {/* Chart */}
       <div className="px-2 pb-3" style={{ height: 280 }}>
-        {visibleSeries.length === 0 ? (
+        {chartData.visibleSeries.length === 0 ? (
           <div className="h-full flex items-center justify-center text-white/20 text-xs">
             No visible traces — add a trace or show an existing series
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
+            {renderChart(chart, chartData)}
           </ResponsiveContainer>
         )}
       </div>
     </motion.div>
   );
-}
+}, (prev, next) => prev.chart === next.chart && prev.index === next.index);
