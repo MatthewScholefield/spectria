@@ -14,7 +14,7 @@ This plan addresses the major performance issues found in the Spectria codebase.
 
 ## Step 1: Memoize `getMergedData` — Move to a Proper Selector with Caching
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 `getMergedData(chartId)` is defined as a method inside the Zustand store and is called directly inside `ChartCard` render. It rebuilds the entire merged/joined dataset on **every render** of every chart card. This is O(n*m) where n = rows, m = series — happening on every keystroke, every store update, every animation frame during live streams. This is the single largest performance bottleneck.
@@ -68,7 +68,7 @@ Additionally, `ChartCard` subscribes to `useStore((s) => s.datasets)` and `useSt
 
 ## Step 2: Fix Zustand Selector Granularity — Prevent Cascading Re-renders
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 Multiple components subscribe to overly broad store slices:
@@ -126,7 +126,7 @@ Multiple components subscribe to overly broad store slices:
 
 ## Step 3: Optimize Store Update Actions — Avoid Unnecessary Object Spreads
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 Most store actions use `.map()` over the entire `charts` array, creating new objects for every chart even when only one chart changed:
@@ -185,7 +185,7 @@ This creates a new array reference, which causes Zustand to notify all subscribe
 
 ## Step 4: Memoize Chart Rendering with React.memo and Computed Values
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 `ChartCard` re-renders on every parent re-render even when its chart data hasn't changed. The `renderChart()` function creates new objects on every call (new `commonProps`, new `xAxisProps`, new `yAxisProps`), which causes Recharts to do full reconciliation.
@@ -271,7 +271,7 @@ This creates a new array reference, which causes Zustand to notify all subscribe
 
 ## Step 6: Optimize Display Name Computation
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 `computeDisplayNames(datasets)` is called in multiple components:
@@ -323,7 +323,7 @@ Each call iterates all datasets, builds hierarchies, computes common prefixes. T
 
 ## Step 7: Replace Framer Motion with CSS Animations Where Possible
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 Framer Motion is used extensively for simple entrance animations in:
@@ -395,7 +395,7 @@ Framer Motion adds ~30KB to the bundle and its `AnimatePresence` and layout anim
 
 ## Step 8: Final Cleanup and Bundle Optimization
 
-**Status:** [ ] Not started
+**Status:** [x] Completed
 
 ### Problem
 Minor remaining optimizations that compound.
