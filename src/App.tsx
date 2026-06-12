@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import { useStore } from './store/useStore';
 import { useGlobalPaste } from './hooks/useGlobalPaste';
 import { AnimatedBackground } from './components/AnimatedBackground';
@@ -5,9 +6,14 @@ import { EmptyState } from './components/EmptyState';
 import { VisualizationView } from './components/VisualizationView';
 import { Toolbar } from './components/Toolbar';
 import { DataInputModal } from './components/DataInputModal';
-import { ConnectSourceModal } from './components/ConnectSourceModal';
-import { ConfigDiffPanel } from './components/ConfigDiffPanel';
 import { StreamManager } from './components/StreamManager';
+
+const ConnectSourceModal = React.lazy(() =>
+  import('./components/ConnectSourceModal').then((m) => ({ default: m.ConnectSourceModal }))
+);
+const ConfigDiffPanel = React.lazy(() =>
+  import('./components/ConfigDiffPanel').then((m) => ({ default: m.ConfigDiffPanel }))
+);
 
 export default function App() {
   const datasets = useStore((s) => s.datasets);
@@ -29,8 +35,10 @@ export default function App() {
       )}
 
       <DataInputModal />
-      <ConnectSourceModal />
-      <ConfigDiffPanel />
+      <Suspense fallback={null}>
+        <ConnectSourceModal />
+        <ConfigDiffPanel />
+      </Suspense>
       <StreamManager />
     </div>
   );

@@ -31,7 +31,7 @@ interface AppState {
   showConfigDiff: boolean;
   editingChartId: string | null;
 
-  addData: (rawText: string, name?: string) => void;
+  addData: (rawText: string, name?: string) => Promise<void>;
   addDatasetFromTable: (table: DataTable, origin: DatasetOrigin, sourceId?: string) => string;
   appendRowsToDataset: (datasetId: string, rows: Record<string, unknown>[]) => void;
   removeDataset: (id: string) => void;
@@ -75,8 +75,8 @@ export const useStore = create<AppState>()(immer((set, get) => ({
   showConfigDiff: false,
   editingChartId: null,
 
-  addData: (rawText: string, name?: string) => {
-    const table = parseRawData(rawText);
+  addData: async (rawText: string, name?: string) => {
+    const table = await parseRawData(rawText);
     if (!table) return;
     const state = get();
     const origin: DatasetOrigin = { kind: 'manual', label: name || generateDatasetName(state.datasets.length) };

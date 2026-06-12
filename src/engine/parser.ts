@@ -1,4 +1,3 @@
-import Papa from 'papaparse';
 import type { DataTable, Column, ColumnType } from './types';
 
 function detectDelimiter(text: string): string {
@@ -76,7 +75,8 @@ function buildColumnsFromRows(rows: unknown[][]): { columns: Column[]; rowCount:
   return { columns, rowCount: rows.length };
 }
 
-function parseDelimited(text: string): DataTable | null {
+async function parseDelimited(text: string): Promise<DataTable | null> {
+  const Papa = (await import('papaparse')).default;
   const delimiter = detectDelimiter(text);
   const result = Papa.parse(text, {
     delimiter,
@@ -117,7 +117,7 @@ function parseDelimited(text: string): DataTable | null {
   return { columns, rowCount: result.data.length, indexColumnKey: null };
 }
 
-export function parseRawData(text: string): DataTable | null {
+export async function parseRawData(text: string): Promise<DataTable | null> {
   const trimmed = text.trim();
   if (!trimmed) return null;
 
