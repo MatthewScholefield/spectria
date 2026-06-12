@@ -29,3 +29,7 @@ When a second dataset is added, `analyzer.ts` merges series with matching column
 - Glassmorphism cards (`glass-card` class), animated mesh gradient background
 - CSS custom properties in `index.css`, Tailwind `@theme` extension
 - Custom Recharts tooltip and legend for dark theme consistency
+
+### Commit Conventions
+
+ - ALWAYS commit after any modifications made in request from a user, even if they did not ask. It is better to commit proactively.
