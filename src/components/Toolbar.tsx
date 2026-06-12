@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio, GitCompare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { computeDisplayNames, getFullName } from '../utils/format';
+import { getFullName } from '../utils/format';
+import { useDisplayNames } from '../hooks/useDisplayNames';
 
 const LOCAL_DATA_MODE = !!(import.meta.env.VITE_LOCAL_DATA_MODE || import.meta.env.VITE_LOCAL_DATA_URL);
 
@@ -22,10 +23,7 @@ export function Toolbar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
-  const { sharedPrefix, displayNames } = useMemo(
-    () => computeDisplayNames(datasets),
-    [datasets],
-  );
+  const { sharedPrefix, displayNames } = useDisplayNames();
 
   const sortedDatasets = useMemo(
     () =>

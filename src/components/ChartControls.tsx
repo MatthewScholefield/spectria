@@ -2,7 +2,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale, ChartValueUnit, RelativeMode, SeriesConfig } from '../engine/types';
 import { computeDefaultLabel, getDisplayLabel } from '../engine/labels';
-import { computeDisplayNames, getFullName } from '../utils/format';
+import { getFullName } from '../utils/format';
+import { useDisplayNames } from '../hooks/useDisplayNames';
 import { Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
 
 const CHART_TYPES: { value: ChartType; label: string }[] = [
@@ -58,9 +59,12 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
   const [showAddTrace, setShowAddTrace] = useState(false);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
 
-  const { displayNames: datasetDisplayNames } = useMemo(
-    () => computeDisplayNames(allDatasets),
-    [allDatasets],
+  const { displayNames: datasetDisplayNames } = useDisplayNames();
+
+  // Memoize display labels per series for performance
+  const seriesLabels = useMemo(
+    () => new Map(chart.series.map((s) => [s, getDisplayLabel(chart.series, s, allDatasets, datasetDisplayNames)])),
+    [chart.series, allDatasets, datasetDisplayNames],
   );
 
   // Dataset IDs participating in this chart
@@ -218,7 +222,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               ) : (
                 relativeBaseOptions.map((series) => (
                   <option key={`${series.datasetId}-${series.columnKey}`} value={`${series.datasetId}::${series.columnKey}`}>
-                    {getDisplayLabel(chart.series, series, allDatasets, datasetDisplayNames)}{series.visible ? '' : ' (hidden)'}
+                    {seriesLabels.get(series)}{series.visible ? '' : ' (hidden)'}
                   </option>
                 ))
               )}
@@ -263,10 +267,11 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               onChange={(e) => updateSeriesColor(chart.id, series.datasetId, series.columnKey, e.target.value)}
             />
             <InputWithBlurCommit
-              value={getDisplayLabel(chart.series, series, allDatasets, datasetDisplayNames)}
+              value={seriesLabels.get(series) ?? ''}
               onCommit={(raw) => {
                 const defaultLabel = computeDefaultLabel(chart.series, series, allDatasets, datasetDisplayNames);
-                const effective = (!raw || raw === defaultLabel) ? '' : raw;
+                const currentLabel = seriesLabels.get(series) ?? '';
+                const effective = (!raw || raw === defaultLabel || raw === currentLabel) ? '' : raw;
                 updateSeriesLabel(chart.id, series.datasetId, series.columnKey, effective);
               }}
               className="flex-1 text-xs bg-transparent py-0.5"
