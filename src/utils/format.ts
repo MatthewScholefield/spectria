@@ -54,8 +54,30 @@ export function createTickFormatter(
   if (range === 0) return (v: number) => v.toLocaleString();
 
   const tickStep = range / 5;
+  const min = Math.min(domain[0], domain[1]);
+  const max = Math.max(domain[0], domain[1]);
+
   let precision = Math.max(0, Math.ceil(-Math.log10(tickStep)));
-  precision = Math.min(precision, 6);
+
+  for (let p = Math.min(precision, 6); p <= 6; p++) {
+    const niceStep = Math.pow(10, -p);
+    const seen = new Set<string>();
+    let collision = false;
+
+    const candidates = [min, max];
+    const firstTick = Math.ceil(min / niceStep) * niceStep;
+    for (let v = firstTick, n = 0; v <= max && n < 100; v += niceStep, n++) {
+      candidates.push(v);
+    }
+
+    for (const v of candidates) {
+      const display = v.toFixed(p);
+      if (seen.has(display)) { collision = true; break; }
+      seen.add(display);
+    }
+
+    if (!collision) { precision = p; break; }
+  }
 
   return (value: number) => {
     const rounded = parseFloat(value.toFixed(precision));
