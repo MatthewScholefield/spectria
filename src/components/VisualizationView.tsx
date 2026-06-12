@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { ChartCard } from './ChartCard';
+import { ChartToolbar } from './ChartToolbar';
 
 export function VisualizationView() {
   const charts = useStore((s) => s.charts);
@@ -18,9 +19,12 @@ export function VisualizationView() {
   );
 
   return (
-    <div className="flex-1 overflow-auto p-6">
-      <div className={`grid ${gridClass} gap-5 items-start`}>
-        {chartCards}
+    <div className="flex-1 overflow-auto flex flex-col">
+      <ChartToolbar />
+      <div className="flex-1 p-6">
+        <div className={`grid ${gridClass} gap-5 items-start`}>
+          {chartCards}
+        </div>
       </div>
     </div>
   );

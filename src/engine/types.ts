@@ -77,6 +77,11 @@ export type AxisBound = 'auto' | number;
 
 export type AxisScale = 'linear' | 'log' | 'sqrt';
 
+export interface GlobalAxisFilter {
+  min: AxisBound;
+  max: AxisBound;
+}
+
 export interface ChartConfig {
   id: string;
   title: string;

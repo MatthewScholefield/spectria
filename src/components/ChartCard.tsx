@@ -112,8 +112,8 @@ const chartViewProps = (chart: ChartConfigType, data: ReturnType<typeof useChart
   yScale: chart.yScale,
   relativeMode: chart.relativeMode,
   isLive: data.isLive,
-  xAxisMin: chart.xAxisMin,
-  xAxisMax: chart.xAxisMax,
+  xAxisMin: data.effectiveXAxisMin,
+  xAxisMax: data.effectiveXAxisMax,
   highlightedDataKeys,
 });
 

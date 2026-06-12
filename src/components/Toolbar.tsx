@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio, GitCompare } from 'lucide-react';
+import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio } from 'lucide-react';
 
 import { useStore } from '../store/useStore';
 import { getFullName } from '../utils/format';
@@ -14,12 +14,9 @@ export function Toolbar() {
   const setGridColumns = useStore((s) => s.setGridColumns);
   const setShowDataModal = useStore((s) => s.setShowDataModal);
   const setShowConnectModal = useStore((s) => s.setShowConnectModal);
-  const setShowConfigDiff = useStore((s) => s.setShowConfigDiff);
   const renameDataset = useStore((s) => s.renameDataset);
   const removeDataset = useStore((s) => s.removeDataset);
   const removeSource = useStore((s) => s.removeSource);
-  const createChart = useStore((s) => s.createChart);
-  const setEditingChartId = useStore((s) => s.setEditingChartId);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
@@ -137,32 +134,6 @@ export function Toolbar() {
             <Columns3 className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {/* New chart button */}
-        {datasets.length > 0 && (
-          <button
-            onClick={() => {
-              const id = createChart();
-              setEditingChartId(id);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="md:hidden">Chart</span>
-            <span className="hidden md:inline">New Chart</span>
-          </button>
-        )}
-
-        {/* Compare Config button */}
-        {sources.length > 1 && sources.some((s) => s.runConfig) && (
-          <button
-            onClick={() => setShowConfigDiff(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer shrink-0"
-          >
-            <GitCompare className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Compare</span>
-          </button>
-        )}
 
         {/* Connect button (hidden in local data mode — "Add Run" replaces it) */}
         {!LOCAL_DATA_MODE && (

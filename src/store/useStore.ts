@@ -14,6 +14,7 @@ import type {
   RelativeMode,
   SeriesIdentity,
   ChartValueUnit,
+  GlobalAxisFilter,
 } from '../engine/types';
 import { parseRawData } from '../engine/parser';
 import { generateCharts, mergeDatasetIntoCharts, PRIMARY_PALETTE } from '../engine/analyzer';
@@ -30,6 +31,11 @@ interface AppState {
   showConnectModal: boolean;
   showConfigDiff: boolean;
   editingChartId: string | null;
+  globalAxisFilters: Record<string, GlobalAxisFilter>;
+
+  setGlobalAxisFilter: (columnKey: string, bounds: GlobalAxisFilter) => void;
+  removeGlobalAxisFilter: (columnKey: string) => void;
+  clearGlobalAxisFilters: () => void;
 
   addData: (rawText: string, name?: string) => Promise<void>;
   addDatasetFromTable: (table: DataTable, origin: DatasetOrigin, sourceId?: string) => string;
@@ -74,6 +80,17 @@ export const useStore = create<AppState>()(immer((set, get) => ({
   showConnectModal: false,
   showConfigDiff: false,
   editingChartId: null,
+  globalAxisFilters: {},
+
+  setGlobalAxisFilter: (columnKey: string, bounds: GlobalAxisFilter) => {
+    set((state) => { state.globalAxisFilters[columnKey] = bounds; });
+  },
+  removeGlobalAxisFilter: (columnKey: string) => {
+    set((state) => { delete state.globalAxisFilters[columnKey]; });
+  },
+  clearGlobalAxisFilters: () => {
+    set((state) => { state.globalAxisFilters = {}; });
+  },
 
   addData: async (rawText: string, name?: string) => {
     const table = await parseRawData(rawText);

@@ -5,7 +5,7 @@ import { getCachedMergedData } from '../store/mergedDataCache';
 import { downsampleData } from '../engine/downsample';
 import { getDisplayLabel } from '../engine/labels';
 import { computeDisplayNames } from '../utils/format';
-import type { ChartConfig, SeriesConfig } from '../engine/types';
+import type { ChartConfig, SeriesConfig, AxisBound } from '../engine/types';
 
 function getSeriesKey(series: { columnKey: string; datasetId: string }): string {
   return series.columnKey + '_' + series.datasetId.slice(-6);
@@ -21,10 +21,16 @@ export interface ChartDataResult {
   visibleDataKeys: string[];
   xDomain: [number, number] | undefined;
   yDomain: [number, number];
+  effectiveXAxisMin: AxisBound;
+  effectiveXAxisMax: AxisBound;
 }
 
 export function useChartData(chart: ChartConfig): ChartDataResult {
   const chartId = chart.id;
+  const globalAxisFilters = useStore((s) => s.globalAxisFilters);
+
+  const effectiveXAxisMin = chart.xAxisMin !== 'auto' ? chart.xAxisMin : (globalAxisFilters[chart.xKey]?.min ?? 'auto');
+  const effectiveXAxisMax = chart.xAxisMax !== 'auto' ? chart.xAxisMax : (globalAxisFilters[chart.xKey]?.max ?? 'auto');
 
   const relevantDatasetIds = useMemo(
     () => new Set(chart.series.map((s) => s.datasetId)),
@@ -90,14 +96,14 @@ export function useChartData(chart: ChartConfig): ChartDataResult {
   }, [chart.type, data, visibleDataKeys]);
 
   const xDomain = useMemo((): [number, number] | undefined => {
-    if (chart.xAxisMin === 'auto' && chart.xAxisMax === 'auto') return undefined;
+    if (effectiveXAxisMin === 'auto' && effectiveXAxisMax === 'auto') return undefined;
     let constrainedMin = Infinity;
     let constrainedMax = -Infinity;
     for (const row of data) {
       const val = row[chart.xKey];
       if (typeof val !== 'number' || !isFinite(val)) continue;
-      if (chart.xAxisMin !== 'auto' && val < chart.xAxisMin) continue;
-      if (chart.xAxisMax !== 'auto' && val > chart.xAxisMax) continue;
+      if (effectiveXAxisMin !== 'auto' && val < effectiveXAxisMin) continue;
+      if (effectiveXAxisMax !== 'auto' && val > effectiveXAxisMax) continue;
       if (val < constrainedMin) constrainedMin = val;
       if (val > constrainedMax) constrainedMax = val;
     }
@@ -106,17 +112,17 @@ export function useChartData(chart: ChartConfig): ChartDataResult {
     const autoMin = constrainedMin - 0.1 * range;
     const autoMax = constrainedMax + 0.1 * range;
     return [
-      chart.xAxisMin === 'auto' ? autoMin : chart.xAxisMin,
-      chart.xAxisMax === 'auto' ? autoMax : chart.xAxisMax,
+      effectiveXAxisMin === 'auto' ? autoMin : effectiveXAxisMin,
+      effectiveXAxisMax === 'auto' ? autoMax : effectiveXAxisMax,
     ];
-  }, [data, chart.xKey, chart.xAxisMin, chart.xAxisMax]);
+  }, [data, chart.xKey, effectiveXAxisMin, effectiveXAxisMax]);
 
   const yDomain = useMemo((): [number, number] => {
     if (chart.yAxisMin !== 'auto' && chart.yAxisMax !== 'auto') {
       return [chart.yAxisMin, chart.yAxisMax];
     }
-    const xLowerBound = chart.xAxisMin === 'auto' ? -Infinity : chart.xAxisMin;
-    const xUpperBound = chart.xAxisMax === 'auto' ? Infinity : chart.xAxisMax;
+    const xLowerBound = effectiveXAxisMin === 'auto' ? -Infinity : effectiveXAxisMin;
+    const xUpperBound = effectiveXAxisMax === 'auto' ? Infinity : effectiveXAxisMax;
     let min = Infinity;
     let max = -Infinity;
     for (const row of data) {
@@ -139,7 +145,7 @@ export function useChartData(chart: ChartConfig): ChartDataResult {
       chart.yAxisMin === 'auto' ? autoMin : chart.yAxisMin,
       chart.yAxisMax === 'auto' ? autoMax : chart.yAxisMax,
     ];
-  }, [data, chart.xKey, chart.xAxisMin, chart.xAxisMax, chart.yAxisMin, chart.yAxisMax, visibleDataKeys]);
+  }, [data, chart.xKey, effectiveXAxisMin, effectiveXAxisMax, chart.yAxisMin, chart.yAxisMax, visibleDataKeys]);
 
   return {
     data,
@@ -151,5 +157,7 @@ export function useChartData(chart: ChartConfig): ChartDataResult {
     visibleDataKeys,
     xDomain,
     yDomain,
+    effectiveXAxisMin,
+    effectiveXAxisMax,
   };
 }
