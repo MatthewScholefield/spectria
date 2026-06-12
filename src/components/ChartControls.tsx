@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale, ChartValueUnit, RelativeMode, SeriesConfig } from '../engine/types';
 import { computeDefaultLabel, getDisplayLabel } from '../engine/labels';
@@ -34,7 +34,11 @@ const VALUE_UNITS: { value: ChartValueUnit; label: string }[] = [
 ];
 
 export function ChartControls({ chart }: { chart: ChartConfig }) {
-  const datasets = useStore((s) => s.datasets);
+  const chartDatasetIds = useMemo(() => new Set(chart.series.map((s) => s.datasetId)), [chart.series]);
+  const datasets = useStore(
+    useCallback((s) => s.datasets.filter((d) => chartDatasetIds.has(d.id)), [chartDatasetIds]),
+  );
+  const allDatasets = useStore((s) => s.datasets);
   const updateChartTitle = useStore((s) => s.updateChartTitle);
   const updateChartType = useStore((s) => s.updateChartType);
   const updateChartXKey = useStore((s) => s.updateChartXKey);
@@ -54,10 +58,12 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
   const [showAddTrace, setShowAddTrace] = useState(false);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
 
-  const { displayNames: datasetDisplayNames } = computeDisplayNames(datasets);
+  const { displayNames: datasetDisplayNames } = useMemo(
+    () => computeDisplayNames(allDatasets),
+    [allDatasets],
+  );
 
   // Dataset IDs participating in this chart
-  const chartDatasetIds = new Set(chart.series.map((s) => s.datasetId));
   const isNumericSeries = (series: SeriesConfig) => {
     const ds = datasets.find((d) => d.id === series.datasetId);
     const col = ds?.table.columns.find((c) => c.key === series.columnKey);
@@ -72,19 +78,17 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
     : '';
 
   // X-axis: collect columns from all datasets in the chart
-  const allXKeys = (() => {
-    const keySet = new Map<string, string>(); // key → label (suffixed if collides)
-    for (const ds of datasets) {
-      if (!chartDatasetIds.has(ds.id) && datasets.length > 0) continue;
-      // Include all datasets for X-axis options; prefer ones in the chart
+  const allXKeys = useMemo(() => {
+    const keySet = new Map<string, string>();
+    for (const ds of allDatasets) {
+      if (!chartDatasetIds.has(ds.id) && allDatasets.length > 0) continue;
       for (const col of ds.table.columns) {
         if (!keySet.has(col.key)) {
           keySet.set(col.key, col.key);
         }
       }
     }
-    // Also include columns from datasets that have series on this chart
-    for (const ds of datasets) {
+    for (const ds of allDatasets) {
       if (!chartDatasetIds.has(ds.id)) continue;
       for (const col of ds.table.columns) {
         if (!keySet.has(col.key)) {
@@ -93,10 +97,10 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
       }
     }
     return Array.from(keySet.entries());
-  })();
+  }, [allDatasets, chartDatasetIds]);
 
   const handleAddTrace = (datasetId: string, columnKey: string) => {
-    const ds = datasets.find((d) => d.id === datasetId);
+    const ds = allDatasets.find((d) => d.id === datasetId);
     if (!ds) return;
     const color = getNextSeriesColor(chart.id);
     addSeries(chart.id, {
@@ -214,7 +218,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               ) : (
                 relativeBaseOptions.map((series) => (
                   <option key={`${series.datasetId}-${series.columnKey}`} value={`${series.datasetId}::${series.columnKey}`}>
-                    {getDisplayLabel(chart.series, series, datasets, datasetDisplayNames)}{series.visible ? '' : ' (hidden)'}
+                    {getDisplayLabel(chart.series, series, allDatasets, datasetDisplayNames)}{series.visible ? '' : ' (hidden)'}
                   </option>
                 ))
               )}
@@ -259,9 +263,9 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
               onChange={(e) => updateSeriesColor(chart.id, series.datasetId, series.columnKey, e.target.value)}
             />
             <InputWithBlurCommit
-              value={getDisplayLabel(chart.series, series, datasets, datasetDisplayNames)}
+              value={getDisplayLabel(chart.series, series, allDatasets, datasetDisplayNames)}
               onCommit={(raw) => {
-                const defaultLabel = computeDefaultLabel(chart.series, series, datasets, datasetDisplayNames);
+                const defaultLabel = computeDefaultLabel(chart.series, series, allDatasets, datasetDisplayNames);
                 const effective = (!raw || raw === defaultLabel) ? '' : raw;
                 updateSeriesLabel(chart.id, series.datasetId, series.columnKey, effective);
               }}
@@ -291,9 +295,9 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
 
         {showAddTrace && (
           <div className="ml-4 pl-2 border-l border-white/5 space-y-1.5">
-            {datasets.length > 1 && (
+            {allDatasets.length > 1 && (
               <div className="flex flex-wrap gap-1">
-                {datasets.map((ds) => (
+                {allDatasets.map((ds) => (
                   <button
                     key={ds.id}
                     onClick={() => setSelectedDatasetId(ds.id)}
@@ -308,8 +312,8 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
                 ))}
               </div>
             )}
-            {(selectedDatasetId || datasets.length === 1 ? selectedDatasetId ?? datasets[0]?.id : null) && (() => {
-              const ds = datasets.find((d) => d.id === (selectedDatasetId ?? datasets[0]?.id));
+            {(selectedDatasetId || allDatasets.length === 1 ? selectedDatasetId ?? allDatasets[0]?.id : null) && (() => {
+              const ds = allDatasets.find((d) => d.id === (selectedDatasetId ?? allDatasets[0]?.id));
               if (!ds) return null;
               const existingKeys = new Set(
                 chart.series

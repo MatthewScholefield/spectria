@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio, GitCompare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
@@ -22,7 +22,22 @@ export function Toolbar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
-  const { sharedPrefix, displayNames } = computeDisplayNames(datasets);
+  const { sharedPrefix, displayNames } = useMemo(
+    () => computeDisplayNames(datasets),
+    [datasets],
+  );
+
+  const sortedDatasets = useMemo(
+    () =>
+      [...datasets].sort((a, b) => {
+        const srcA = a.sourceId ? sources.find((s) => s.id === a.sourceId) : null;
+        const srcB = b.sourceId ? sources.find((s) => s.id === b.sourceId) : null;
+        const liveA = srcA?.status === 'live' || srcA?.status === 'connecting' ? 0 : 1;
+        const liveB = srcB?.status === 'live' || srcB?.status === 'connecting' ? 0 : 1;
+        return liveA - liveB;
+      }),
+    [datasets, sources],
+  );
 
   return (
     <motion.div
@@ -39,16 +54,7 @@ export function Toolbar() {
             {sharedPrefix && (
               <span className="text-xs text-white/30 shrink-0">{sharedPrefix}</span>
             )}
-            {(() => {
-              const sortedDatasets = [...datasets].sort((a, b) => {
-                const srcA = a.sourceId ? sources.find((s) => s.id === a.sourceId) : null;
-                const srcB = b.sourceId ? sources.find((s) => s.id === b.sourceId) : null;
-                const liveA = srcA?.status === 'live' || srcA?.status === 'connecting' ? 0 : 1;
-                const liveB = srcB?.status === 'live' || srcB?.status === 'connecting' ? 0 : 1;
-                return liveA - liveB;
-              });
-              return sortedDatasets;
-            })().map((ds) => {
+            {sortedDatasets.map((ds) => {
               const source = ds.sourceId ? sources.find((s) => s.id === ds.sourceId) : null;
               const liveDot = source?.status === 'live' ? 'bg-green-400' : source?.status === 'connecting' ? 'bg-yellow-400 animate-pulse' : null;
               const chipLabel = displayNames.get(ds.id) ?? getFullName(ds.origin);

@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 const LOCAL_DATA_MODE = !!(import.meta.env.VITE_LOCAL_DATA_MODE || import.meta.env.VITE_LOCAL_DATA_URL);
 
 export function useGlobalPaste() {
-  const datasets = useStore((s) => s.datasets);
+  const datasetCount = useStore((s) => s.datasets.length);
   const addData = useStore((s) => s.addData);
   const setShowDataModal = useStore((s) => s.setShowDataModal);
 
@@ -16,7 +16,7 @@ export function useGlobalPaste() {
       if (!text?.trim()) return;
 
       // If no data loaded yet, parse directly
-      if (datasets.length === 0) {
+      if (datasetCount === 0) {
         e.preventDefault();
         addData(text);
       } else {
@@ -28,5 +28,5 @@ export function useGlobalPaste() {
 
     document.addEventListener('paste', handler);
     return () => document.removeEventListener('paste', handler);
-  }, [datasets.length, addData, setShowDataModal]);
+  }, [datasetCount, addData, setShowDataModal]);
 }

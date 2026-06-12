@@ -8,11 +8,11 @@ function SourceConnection({ sourceId }: { sourceId: string }) {
 }
 
 export function StreamManager() {
-  const sources = useStore((s) => s.sources);
+  const sourceIds = useStore((s) => s.sources.map((src) => src.id));
   return (
     <>
-      {sources.map((s) => (
-        <SourceConnection key={s.id} sourceId={s.id} />
+      {sourceIds.map((id) => (
+        <SourceConnection key={id} sourceId={id} />
       ))}
     </>
   );
