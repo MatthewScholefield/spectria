@@ -1,10 +1,9 @@
 import React from 'react';
 import {
   BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
-import { ScrollableLegend as LegendContent } from '../ChartCard';
 import { CustomTooltip } from '../ChartCard';
 
 interface ChartViewProps {
@@ -22,6 +21,7 @@ interface ChartViewProps {
   isLive: boolean;
   xAxisMin: AxisBound;
   xAxisMax: AxisBound;
+  highlightedDataKeys: Set<string> | null;
 }
 
 export const BarChartView = React.memo(function BarChartView({
@@ -37,6 +37,7 @@ export const BarChartView = React.memo(function BarChartView({
   yScale,
   relativeMode,
   isLive,
+  highlightedDataKeys,
 }: ChartViewProps) {
   const animProps = isLive ? { isAnimationActive: false } : {};
   const xAxisProps = {
@@ -64,17 +65,21 @@ export const BarChartView = React.memo(function BarChartView({
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip unit={yUnit} />} />
-      {series.map((s) => (
-        <Bar
-          key={`${s.datasetId}-${s.columnKey}`}
-          dataKey={seriesKeyMap.get(s)!}
-          name={displayLabels.get(s)!}
-          fill={s.color}
-          radius={[4, 4, 0, 0]}
-          {...animProps}
-        />
-      ))}
-      <Legend content={<LegendContent />} />
+      {series.map((s) => {
+        const dataKey = seriesKeyMap.get(s)!;
+        const isHighlighted = highlightedDataKeys === null || highlightedDataKeys.has(dataKey);
+        return (
+          <Bar
+            key={`${s.datasetId}-${s.columnKey}`}
+            dataKey={dataKey}
+            name={displayLabels.get(s)!}
+            fill={s.color}
+            fillOpacity={isHighlighted ? 1 : 0.1}
+            radius={[4, 4, 0, 0]}
+            {...animProps}
+          />
+        );
+      })}
     </BarChart>
   );
 });

@@ -1,10 +1,9 @@
 import React from 'react';
 import {
   LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
-import { ScrollableLegend as LegendContent } from '../ChartCard';
 import { CustomTooltip } from '../ChartCard';
 
 interface ChartViewProps {
@@ -22,6 +21,7 @@ interface ChartViewProps {
   isLive: boolean;
   xAxisMin: AxisBound;
   xAxisMax: AxisBound;
+  highlightedDataKeys: Set<string> | null;
 }
 
 export const LineChartView = React.memo(function LineChartView({
@@ -37,6 +37,7 @@ export const LineChartView = React.memo(function LineChartView({
   yScale,
   relativeMode,
   isLive,
+  highlightedDataKeys,
 }: ChartViewProps) {
   const animProps = isLive ? { isAnimationActive: false } : {};
   const xAxisProps = {
@@ -64,20 +65,24 @@ export const LineChartView = React.memo(function LineChartView({
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip unit={yUnit} />} />
-      {series.map((s) => (
-        <Line
-          key={`${s.datasetId}-${s.columnKey}`}
-          type="monotone"
-          dataKey={seriesKeyMap.get(s)!}
-          name={displayLabels.get(s)!}
-          stroke={s.color}
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
-          {...animProps}
-        />
-      ))}
-      <Legend content={<LegendContent />} />
+      {series.map((s) => {
+        const dataKey = seriesKeyMap.get(s)!;
+        const isHighlighted = highlightedDataKeys === null || highlightedDataKeys.has(dataKey);
+        return (
+          <Line
+            key={`${s.datasetId}-${s.columnKey}`}
+            type="monotone"
+            dataKey={dataKey}
+            name={displayLabels.get(s)!}
+            stroke={s.color}
+            strokeWidth={isHighlighted ? 2 : 1}
+            strokeOpacity={isHighlighted ? 1 : 0.1}
+            dot={false}
+            activeDot={isHighlighted ? { r: 4, strokeWidth: 0 } : false}
+            {...animProps}
+          />
+        );
+      })}
     </LineChart>
   );
 });

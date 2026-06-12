@@ -1,10 +1,9 @@
 import React from 'react';
 import {
   ScatterChart, Scatter,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
-import { ScrollableLegend as LegendContent } from '../ChartCard';
 import { CustomTooltip } from '../ChartCard';
 
 interface ChartViewProps {
@@ -22,6 +21,7 @@ interface ChartViewProps {
   isLive: boolean;
   xAxisMin: AxisBound;
   xAxisMax: AxisBound;
+  highlightedDataKeys: Set<string> | null;
 }
 
 export const ScatterChartView = React.memo(function ScatterChartView({
@@ -36,6 +36,7 @@ export const ScatterChartView = React.memo(function ScatterChartView({
   xScale,
   yScale,
   relativeMode,
+  highlightedDataKeys,
 }: ChartViewProps) {
   const xAxisProps = {
     dataKey: xKey,
@@ -62,18 +63,23 @@ export const ScatterChartView = React.memo(function ScatterChartView({
       <XAxis {...xAxisProps} name={xKey} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip unit={yUnit} />} />
-      {series.map((s) => (
-        <Scatter
-          key={`${s.datasetId}-${s.columnKey}`}
-          name={displayLabels.get(s)!}
-          data={data.map((row) => ({
-            [xKey]: row[xKey],
-            [seriesKeyMap.get(s)!]: row[seriesKeyMap.get(s)!],
-          }))}
-          fill={s.color}
-        />
-      ))}
-      <Legend content={<LegendContent />} />
+      {series.map((s) => {
+        const dataKey = seriesKeyMap.get(s)!;
+        const isHighlighted = highlightedDataKeys === null || highlightedDataKeys.has(dataKey);
+        return (
+          <Scatter
+            key={`${s.datasetId}-${s.columnKey}`}
+            name={displayLabels.get(s)!}
+            data={data.map((row) => ({
+              [xKey]: row[xKey],
+              [dataKey]: row[dataKey],
+            }))}
+            fill={s.color}
+            fillOpacity={isHighlighted ? 1 : 0.1}
+            strokeOpacity={isHighlighted ? 1 : 0.1}
+          />
+        );
+      })}
     </ScatterChart>
   );
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ResponsiveContainer } from 'recharts';
 
 import { Settings, ChevronUp } from 'lucide-react';
@@ -10,29 +10,6 @@ import { LineChartView } from './charts/LineChartView';
 import { AreaChartView } from './charts/AreaChartView';
 import { BarChartView } from './charts/BarChartView';
 import { ScatterChartView } from './charts/ScatterChartView';
-
-export function ScrollableLegend(props: any) {
-  const { payload } = props;
-  if (!payload?.length) return null;
-  return (
-    <div style={{ maxHeight: 80, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 8px', padding: '4px 0' }}>
-      {payload.map((entry: any, i: number) => (
-        <span key={i} style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, whiteSpace: 'nowrap' }}>
-          <span style={{
-            display: 'inline-block',
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: entry.color,
-            marginRight: 6,
-            verticalAlign: 'middle',
-          }} />
-          {entry.value}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 export function CustomTooltip({ active, payload, label, unit }: {
   active?: boolean;
@@ -62,7 +39,67 @@ export function CustomTooltip({ active, payload, label, unit }: {
   );
 }
 
-const chartViewProps = (chart: ChartConfigType, data: ReturnType<typeof useChartData>) => ({
+interface LegendItem {
+  dataKey: string;
+  label: string;
+  color: string;
+}
+
+function InteractiveLegend({
+  items,
+  highlightedKeys,
+  onLegendClick,
+}: {
+  items: LegendItem[];
+  highlightedKeys: Set<string> | null;
+  onLegendClick: (dataKey: string, ctrlKey: boolean) => void;
+}) {
+  if (!items.length) return null;
+
+  return (
+    <div style={{
+      maxHeight: 80,
+      overflowY: 'auto',
+      display: 'flex',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: '0 8px',
+      padding: '4px 0',
+    }}>
+      {items.map((item) => {
+        const isHighlighted = highlightedKeys === null || highlightedKeys.has(item.dataKey);
+        return (
+          <span
+            key={item.dataKey}
+            onClick={(e) => onLegendClick(item.dataKey, e.ctrlKey || e.metaKey)}
+            style={{
+              color: isHighlighted ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)',
+              fontSize: 11,
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              transition: 'color 0.15s ease',
+              userSelect: 'none',
+            }}
+          >
+            <span style={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: isHighlighted ? item.color : 'rgba(255,255,255,0.15)',
+              marginRight: 6,
+              verticalAlign: 'middle',
+              transition: 'background-color 0.15s ease',
+            }} />
+            {item.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+const chartViewProps = (chart: ChartConfigType, data: ReturnType<typeof useChartData>, highlightedDataKeys: Set<string> | null) => ({
   data: data.sampledData,
   xKey: chart.xKey,
   series: data.visibleSeries,
@@ -77,10 +114,11 @@ const chartViewProps = (chart: ChartConfigType, data: ReturnType<typeof useChart
   isLive: data.isLive,
   xAxisMin: chart.xAxisMin,
   xAxisMax: chart.xAxisMax,
+  highlightedDataKeys,
 });
 
-function renderChart(chart: ChartConfigType, data: ReturnType<typeof useChartData>) {
-  const props = chartViewProps(chart, data);
+function renderChart(chart: ChartConfigType, data: ReturnType<typeof useChartData>, highlightedDataKeys: Set<string> | null) {
+  const props = chartViewProps(chart, data, highlightedDataKeys);
   switch (chart.type) {
     case 'area':
       return <AreaChartView {...props} />;
@@ -95,7 +133,35 @@ function renderChart(chart: ChartConfigType, data: ReturnType<typeof useChartDat
 
 export const ChartCard = React.memo(function ChartCard({ chart, index }: { chart: ChartConfigType; index: number }) {
   const [showControls, setShowControls] = useState(false);
+  const [highlightedKeys, setHighlightedKeys] = useState<Set<string> | null>(null);
   const chartData = useChartData(chart);
+
+  const legendItems: LegendItem[] = chartData.visibleSeries.map((s) => ({
+    dataKey: chartData.seriesKeyMap.get(s)!,
+    label: chartData.displayLabels.get(s)!,
+    color: s.color,
+  }));
+
+  const handleLegendClick = useCallback((dataKey: string, ctrlKey: boolean) => {
+    setHighlightedKeys((prev) => {
+      if (prev === null) {
+        return new Set([dataKey]);
+      }
+      const next = new Set(prev);
+      if (ctrlKey) {
+        if (next.has(dataKey)) {
+          next.delete(dataKey);
+          return next.size === 0 ? null : next;
+        }
+        next.add(dataKey);
+        return next;
+      }
+      if (next.has(dataKey) && next.size === 1) {
+        return null;
+      }
+      return new Set([dataKey]);
+    });
+  }, []);
 
   return (
     <div
@@ -123,16 +189,25 @@ export const ChartCard = React.memo(function ChartCard({ chart, index }: { chart
       )}
 
       {/* Chart */}
-      <div className="px-2 pb-3" style={{ height: 280 }}>
+      <div className="px-2 pb-1" style={{ height: 260 }}>
         {chartData.visibleSeries.length === 0 ? (
           <div className="h-full flex items-center justify-center text-white/20 text-xs">
             No visible traces — add a trace or show an existing series
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            {renderChart(chart, chartData)}
+            {renderChart(chart, chartData, highlightedKeys)}
           </ResponsiveContainer>
         )}
+      </div>
+
+      {/* Legend */}
+      <div className="px-4 pb-3">
+        <InteractiveLegend
+          items={legendItems}
+          highlightedKeys={highlightedKeys}
+          onLegendClick={handleLegendClick}
+        />
       </div>
     </div>
   );

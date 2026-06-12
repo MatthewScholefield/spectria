@@ -1,10 +1,9 @@
 import React from 'react';
 import {
   AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
-import { ScrollableLegend as LegendContent } from '../ChartCard';
 import { CustomTooltip } from '../ChartCard';
 
 interface ChartViewProps {
@@ -22,6 +21,7 @@ interface ChartViewProps {
   isLive: boolean;
   xAxisMin: AxisBound;
   xAxisMax: AxisBound;
+  highlightedDataKeys: Set<string> | null;
 }
 
 export const AreaChartView = React.memo(function AreaChartView({
@@ -37,6 +37,7 @@ export const AreaChartView = React.memo(function AreaChartView({
   yScale,
   relativeMode,
   isLive,
+  highlightedDataKeys,
 }: ChartViewProps) {
   const animProps = isLive ? { isAnimationActive: false } : {};
   const xAxisProps = {
@@ -64,22 +65,26 @@ export const AreaChartView = React.memo(function AreaChartView({
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip unit={yUnit} />} />
-      {series.map((s) => (
-        <Area
-          key={`${s.datasetId}-${s.columnKey}`}
-          type="monotone"
-          dataKey={seriesKeyMap.get(s)!}
-          name={displayLabels.get(s)!}
-          stroke={s.color}
-          fill={s.color}
-          fillOpacity={0.1}
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
-          {...animProps}
-        />
-      ))}
-      <Legend content={<LegendContent />} />
+      {series.map((s) => {
+        const dataKey = seriesKeyMap.get(s)!;
+        const isHighlighted = highlightedDataKeys === null || highlightedDataKeys.has(dataKey);
+        return (
+          <Area
+            key={`${s.datasetId}-${s.columnKey}`}
+            type="monotone"
+            dataKey={dataKey}
+            name={displayLabels.get(s)!}
+            stroke={s.color}
+            fill={s.color}
+            fillOpacity={isHighlighted ? 0.1 : 0.01}
+            strokeOpacity={isHighlighted ? 1 : 0.1}
+            strokeWidth={isHighlighted ? 2 : 1}
+            dot={false}
+            activeDot={isHighlighted ? { r: 4, strokeWidth: 0 } : false}
+            {...animProps}
+          />
+        );
+      })}
     </AreaChart>
   );
 });
