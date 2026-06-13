@@ -59,24 +59,17 @@ export function createTickFormatter(
 
   let precision = Math.max(0, Math.ceil(-Math.log10(tickStep)));
 
-  for (let p = Math.min(precision, 6); p <= 6; p++) {
-    const niceStep = Math.pow(10, -p);
-    const seen = new Set<string>();
-    let collision = false;
+  // Simulate the actual tick positions Recharts would use (~5 evenly spaced)
+  const simTicks: number[] = [];
+  for (let i = 0; i <= 5; i++) {
+    simTicks.push(min + i * (max - min) / 5);
+  }
 
-    const candidates = [min, max];
-    const firstTick = Math.ceil(min / niceStep) * niceStep;
-    for (let v = firstTick, n = 0; v <= max && n < 100; v += niceStep, n++) {
-      candidates.push(v);
-    }
-
-    for (const v of candidates) {
-      const display = v.toFixed(p);
-      if (seen.has(display)) { collision = true; break; }
-      seen.add(display);
-    }
-
-    if (!collision) { precision = p; break; }
+  // Bump precision only if the actual tick positions collide
+  while (precision <= 6) {
+    const formatted = simTicks.map(t => t.toFixed(precision));
+    if (new Set(formatted).size === formatted.length) break;
+    precision++;
   }
 
   return (value: number) => {
