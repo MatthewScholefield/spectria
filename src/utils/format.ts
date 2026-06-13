@@ -47,32 +47,33 @@ export function formatChartValue(value: number, unit: ChartValueUnit): string {
   return `${formatted}${suffixes[unit] ? ` ${suffixes[unit]}` : ''}`;
 }
 
-export function createTickFormatter(
+export function createYAxisConfig(
   domain: [number, number],
-): (value: number) => string {
+): { ticks: number[]; tickFormatter: (value: number) => string } {
   const range = Math.abs(domain[1] - domain[0]);
-  if (range === 0) return (v: number) => v.toLocaleString();
+  if (range === 0) {
+    return { ticks: [domain[0]], tickFormatter: (v: number) => v.toLocaleString() };
+  }
 
-  const tickStep = range / 5;
   const min = Math.min(domain[0], domain[1]);
   const max = Math.max(domain[0], domain[1]);
 
-  let precision = Math.max(0, Math.ceil(-Math.log10(tickStep)));
+  // Nice number algorithm: pick step from 1-2-5 series
+  const rawStep = range / 5;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const residual = rawStep / magnitude;
+  const niceResidual = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+  const step = niceResidual * magnitude;
 
-  // Simulate the actual tick positions Recharts would use (~5 evenly spaced)
-  const simTicks: number[] = [];
-  for (let i = 0; i <= 5; i++) {
-    simTicks.push(min + i * (max - min) / 5);
+  const start = Math.floor(min / step) * step;
+  const ticks: number[] = [];
+  for (let v = start; v <= max + step * 0.001; v += step) {
+    ticks.push(parseFloat(v.toFixed(10)));
   }
 
-  // Bump precision only if the actual tick positions collide
-  while (precision <= 6) {
-    const formatted = simTicks.map(t => t.toFixed(precision));
-    if (new Set(formatted).size === formatted.length) break;
-    precision++;
-  }
+  const precision = Math.max(0, -Math.floor(Math.log10(step) + 1e-10));
 
-  return (value: number) => {
+  const tickFormatter = (value: number) => {
     const rounded = parseFloat(value.toFixed(precision));
     if (rounded === 0) return '0';
     return rounded.toLocaleString(undefined, {
@@ -80,6 +81,8 @@ export function createTickFormatter(
       maximumFractionDigits: precision,
     });
   };
+
+  return { ticks, tickFormatter };
 }
 
 export function timeAgo(epoch: number | null): string {

@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { SeriesConfig, ChartValueUnit, AxisScale, AxisBound } from '../../engine/types';
 import { CustomTooltip } from '../ChartCard';
-import { createTickFormatter } from '../../utils/format';
+import { createYAxisConfig } from '../../utils/format';
 
 interface ChartViewProps {
   data: Record<string, unknown>[];
@@ -49,7 +49,7 @@ export const BarChartView = React.memo(function BarChartView({
     ...(xScale !== 'linear' ? { scale: xScale } : {}),
     ...(xDomain ? { type: 'number' as const, domain: xDomain, allowDataOverflow: true } : {}),
   };
-  const tickFormatter = React.useMemo(() => createTickFormatter(yDomain), [yDomain]);
+  const { ticks: yTicks, tickFormatter } = React.useMemo(() => createYAxisConfig(yDomain), [yDomain]);
   const effectiveYScale = relativeMode === 'none' ? yScale : 'linear';
   const yAxisProps = {
     tick: { fontSize: 11 },
@@ -58,6 +58,7 @@ export const BarChartView = React.memo(function BarChartView({
     width: 50,
     domain: yDomain,
     allowDataOverflow: true,
+    ticks: yTicks,
     tickFormatter,
     ...(effectiveYScale !== 'linear' ? { scale: effectiveYScale } : {}),
   };
